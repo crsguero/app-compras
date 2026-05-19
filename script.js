@@ -4476,6 +4476,29 @@ function renderLista2() {
 renderLista2();
 
 // ─── Firebase Auth & Real-time Sync ────────────────────────────────────────
+
+// Firebase almacena arrays como objetos {0:…,1:…} cuando tienen huecos o
+// cuando contienen arrays anidados. Esta función los convierte de vuelta a arrays.
+function fromFirebase(val) {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) return val.map(fromFirebase);
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    const allNumeric = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+    if (allNumeric) {
+      const arr = [];
+      keys.sort((a, b) => Number(a) - Number(b)).forEach(k => {
+        arr[Number(k)] = fromFirebase(val[k]);
+      });
+      return arr;
+    }
+    const obj = {};
+    keys.forEach(k => { obj[k] = fromFirebase(val[k]); });
+    return obj;
+  }
+  return val;
+}
+
 let _listenersStarted = false;
 
 function startFirebaseListeners() {
@@ -4497,7 +4520,7 @@ function startFirebaseListeners() {
   Promise.all(paths.map(p => db.ref(p.ref).once('value')))
     .then(snaps => {
       snaps.forEach((snap, i) => {
-        const val = snap.val();
+        const val = fromFirebase(snap.val());
         if (val !== null && val !== undefined) {
           paths[i].set(val);
         } else {
@@ -4522,7 +4545,7 @@ function startFirebaseListeners() {
       // Set up persistent real-time listeners for cross-device sync
       paths.forEach(p => {
         db.ref(p.ref).on('value', snap => {
-          const val = snap.val();
+          const val = fromFirebase(snap.val());
           if (val === null || val === undefined) return;
           p.set(val);
           try { p.render(); } catch (e) {}
