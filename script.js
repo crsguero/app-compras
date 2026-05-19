@@ -4509,7 +4509,7 @@ function startFirebaseListeners() {
     { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = v; }, render: () => renderIngredients() },
     { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = v; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
     { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = v; }, render: () => renderCalendarEntries() },
-    { key: 'lista2Items',      ref: 'compra/lista2Items',      set: v => { lista2Items      = v; }, render: () => renderLista2() },
+    { key: 'lista2Items',      ref: 'compra/lista2Items',      set: v => { lista2Items      = Array.isArray(v) ? v.map(item => ({ ...item, ingredientNames: item.ingredientNames || [] })) : []; }, render: () => renderLista2() },
     { key: 'lista2Checked',    ref: 'compra/lista2Checked',    set: v => { lista2Checked    = v; }, render: () => renderLista2() },
     { key: 'lista2ShopQty',    ref: 'compra/lista2ShopQty',    set: v => { lista2ShopQty    = v; }, render: () => renderLista2() },
     { key: 'purchasedItems',   ref: 'compra/purchasedItems',   set: v => { purchasedItems   = v; }, render: () => { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } },
