@@ -4533,19 +4533,19 @@ function startFirebaseListeners() {
 }
 
 auth.onAuthStateChanged(user => {
-  const loading     = document.getElementById('auth-loading');
+  const loading      = document.getElementById('auth-loading');
   const loginOverlay = document.getElementById('login-overlay');
-  const appLayout   = document.getElementById('app-layout');
+  const appLayout    = document.getElementById('app-layout');
 
-  if (loading) loading.hidden = true;
+  if (loading) loading.style.display = 'none';
 
   if (user) {
-    if (loginOverlay) loginOverlay.hidden = true;
-    if (appLayout)    appLayout.hidden    = false;
+    if (loginOverlay) loginOverlay.style.display = 'none';
+    if (appLayout)    appLayout.style.display    = 'block';
     startFirebaseListeners();
   } else {
-    if (loginOverlay) loginOverlay.hidden = false;
-    if (appLayout)    appLayout.hidden    = true;
+    if (loginOverlay) loginOverlay.style.display = 'flex';
+    if (appLayout)    appLayout.style.display    = 'none';
   }
 });
 
