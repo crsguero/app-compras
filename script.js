@@ -4507,7 +4507,7 @@ function startFirebaseListeners() {
 
   const paths = [
     { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = v; }, render: () => renderIngredients() },
-    { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = v; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
+    { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = Array.isArray(v) ? v.map(r => ({ ...r, ingredients: r.ingredients || [] })) : []; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
     { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = v; }, render: () => renderCalendarEntries() },
     { key: 'lista2Items',      ref: 'compra/lista2Items',      set: v => { lista2Items      = Array.isArray(v) ? v.map(item => ({ ...item, ingredientNames: item.ingredientNames || [] })) : []; }, render: () => renderLista2() },
     { key: 'lista2Checked',    ref: 'compra/lista2Checked',    set: v => { lista2Checked    = v; }, render: () => renderLista2() },
@@ -4536,11 +4536,11 @@ function startFirebaseListeners() {
       });
 
       // Full re-render after initial load
-      renderIngredients();
-      renderRecipes();
-      renderCalendarEntries();
-      renderLista2();
-      if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState();
+      try { renderIngredients(); } catch(e) {}
+      try { renderRecipes(); } catch(e) {}
+      try { renderCalendarEntries(); } catch(e) {}
+      try { renderLista2(); } catch(e) {}
+      try { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } catch(e) {}
 
       // Set up persistent real-time listeners for cross-device sync
       paths.forEach(p => {
