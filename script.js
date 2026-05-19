@@ -3680,7 +3680,7 @@ function syncLista2DateWrapper(input) {
 if (lista2Start) lista2Start.addEventListener('change', () => syncLista2DateWrapper(lista2Start));
 if (lista2End) lista2End.addEventListener('change', () => syncLista2DateWrapper(lista2End));
 
-document.getElementById('openLista2Modal')?.addEventListener('click', () => {
+function openLista2ModalHandler() {
   if (lista2StoreSelect) {
     lista2StoreSelect.innerHTML = '<option value="">Selecciona un comercio...</option>';
     Object.entries(STORE_LABELS).forEach(([key, label]) => {
@@ -3691,7 +3691,10 @@ document.getElementById('openLista2Modal')?.addEventListener('click', () => {
     });
   }
   openModal(lista2Modal);
-});
+}
+
+document.getElementById('openLista2Modal')?.addEventListener('click', openLista2ModalHandler);
+document.getElementById('openLista2ModalDesktop')?.addEventListener('click', openLista2ModalHandler);
 
 document.getElementById('closeLista2Modal')?.addEventListener('click', () => {
   closeModal(lista2Modal);
@@ -4343,7 +4346,6 @@ function renderLista2ShopList(item) {
 
     const nameGroup = document.createElement('div');
     nameGroup.className = 'lista2-name-group';
-    nameGroup.addEventListener('click', () => openLista2Sheet(name));
 
     const nameEl = document.createElement('span');
     nameEl.className = 'shopping-name';
