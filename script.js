@@ -1175,8 +1175,6 @@ const recipeNameInput = document.getElementById('recipeNameInput');
 const recipeList = document.getElementById('recipeList');
 const ingredientSelectors = document.getElementById('ingredientSelectors');
 const addIngredientBtn = document.getElementById('addIngredientToRecipe');
-const saveRecipeBtn = document.getElementById('saveRecipeBtn');
-const deleteRecipeBtn = document.getElementById('deleteRecipeBtn');
 
 const calendarForm = document.getElementById('calendarForm');
 const calendarDateInput = document.getElementById('calendarDate');
@@ -1275,7 +1273,6 @@ function updateCalendarMonthLabel() {
 
 const openRecipeModalBtn = document.getElementById('openRecipeModal');
 const recipeModal = document.getElementById('recipeModal');
-const closeRecipeModalBtn = document.getElementById('closeRecipeModal');
 const closeRecipeSheetBtn = document.getElementById('closeRecipeSheetBtn');
 
 function isDesktop() {
@@ -1296,24 +1293,134 @@ function closeRecipePanel() {
   setTimeout(resetRecipeForm, 260);
 }
 
-if (openRecipeModalBtn && recipeModal) {
-  openRecipeModalBtn.addEventListener('click', () => {
-    resetRecipeForm();
-    const title = document.getElementById('recipeModalTitle');
-    if (title) title.textContent = 'Nueva receta';
-    openRecipePanel();
-  });
-}
-
-if (closeRecipeModalBtn && recipeModal) {
-  closeRecipeModalBtn.addEventListener('click', () => {
-    closeRecipePanel();
-  });
-}
-
 closeRecipeSheetBtn?.addEventListener('click', () => {
   closeRecipePanel();
 });
+
+// -----------------------
+// MODAL NUEVA RECETA
+// -----------------------
+const newRecipeModal = document.getElementById('newRecipeModal');
+const newRecipeForm = document.getElementById('newRecipeForm');
+const newRecipeIngredientSelectors = document.getElementById('newRecipeIngredientSelectors');
+const newRecipeAddIngredientBtn = document.getElementById('newRecipeAddIngredient');
+
+if (openRecipeModalBtn) {
+  openRecipeModalBtn.addEventListener('click', () => {
+    if (newRecipeForm) newRecipeForm.reset();
+    if (newRecipeIngredientSelectors) newRecipeIngredientSelectors.innerHTML = '';
+    openModal(newRecipeModal);
+  });
+}
+
+document.getElementById('closeNewRecipeModal')?.addEventListener('click', () => {
+  closeModal(newRecipeModal);
+});
+
+newRecipeModal?.addEventListener('click', (e) => {
+  if (e.target === newRecipeModal) closeModal(newRecipeModal);
+});
+
+function addNewRecipeIngredientRow() {
+  if (!newRecipeIngredientSelectors) return;
+  if (ingredients.length === 0) {
+    alert('Añade primero algún ingrediente');
+    return;
+  }
+
+  const div = document.createElement('div');
+  div.className = 'recipe-ingredient-row';
+
+  const selectWrapper = document.createElement('div');
+  selectWrapper.className = 'select-field';
+
+  const select = document.createElement('select');
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Selecciona un ingrediente';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  sortedIngredients.forEach((ingredient) => {
+    const option = document.createElement('option');
+    option.value = ingredient.id;
+    option.textContent = ingredient.name;
+    select.appendChild(option);
+  });
+
+  selectWrapper.appendChild(select);
+
+  const formatoWrapper = document.createElement('div');
+  formatoWrapper.className = 'formato-wrapper';
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'number-input';
+  input.placeholder = 'Cantidad';
+  input.min = '1';
+
+  const unitSpan = document.createElement('span');
+  unitSpan.className = 'formato-unit';
+  unitSpan.textContent = '-';
+
+  select.addEventListener('change', () => {
+    const ing = ingredients.find(i => i.id === Number(select.value));
+    unitSpan.textContent = ing?.unit ?? '-';
+  });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'recipe-ingredient-remove-btn';
+  removeBtn.setAttribute('aria-label', 'Eliminar ingrediente de la receta');
+  removeBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+  removeBtn.addEventListener('click', () => div.remove());
+
+  formatoWrapper.appendChild(input);
+  formatoWrapper.appendChild(unitSpan);
+  div.appendChild(selectWrapper);
+  div.appendChild(formatoWrapper);
+  div.appendChild(removeBtn);
+  newRecipeIngredientSelectors.appendChild(div);
+}
+
+if (newRecipeAddIngredientBtn) {
+  newRecipeAddIngredientBtn.addEventListener('click', addNewRecipeIngredientRow);
+}
+
+if (newRecipeForm) {
+  newRecipeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nameInput = document.getElementById('newRecipeNameInput');
+    const name = nameInput?.value.trim();
+    if (!name) {
+      alert('Rellena el nombre de la receta');
+      return;
+    }
+
+    const recipeIngredients = [];
+    newRecipeIngredientSelectors?.querySelectorAll('.recipe-ingredient-row').forEach(row => {
+      const select = row.querySelector('select');
+      const input = row.querySelector('input');
+      if (!select || !input) return;
+      if (select.value && input.value) {
+        recipeIngredients.push({
+          ingredientId: Number(select.value),
+          quantity: Number(input.value),
+        });
+      }
+    });
+
+    recipes.push({ id: Date.now(), name, ingredients: recipeIngredients });
+    saveRecipes();
+    renderRecipes();
+    closeModal(newRecipeModal);
+  });
+}
 
 
 
@@ -1703,8 +1810,9 @@ function makeRemoveIngredientRowBtn(row, savedIngredientId) {
   btn.type = 'button';
   btn.className = 'recipe-ingredient-remove-btn';
   btn.setAttribute('aria-label', 'Eliminar ingrediente de la receta');
-  btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
   btn.addEventListener('click', () => {
@@ -1756,6 +1864,9 @@ function addIngredientRow() {
   const div = document.createElement('div');
   div.className = 'recipe-ingredient-row';
 
+  const selectWrapper = document.createElement('div');
+  selectWrapper.className = 'select-field';
+
   const select = document.createElement('select');
   const placeholder = document.createElement('option');
   placeholder.value = '';
@@ -1772,28 +1883,30 @@ function addIngredientRow() {
     select.appendChild(option);
   });
 
-  const qtyWrapper = document.createElement('div');
-  qtyWrapper.className = 'recipe-qty-wrapper';
+  selectWrapper.appendChild(select);
+
+  const formatoWrapper = document.createElement('div');
+  formatoWrapper.className = 'formato-wrapper';
 
   const input = document.createElement('input');
   input.type = 'number';
+  input.className = 'number-input';
   input.placeholder = 'Cantidad';
   input.min = '1';
 
   const unitSpan = document.createElement('span');
-  unitSpan.className = 'recipe-ingredient-unit';
-  const firstIngredient = sortedIngredients.find(i => i.id === Number(select.value));
-  unitSpan.textContent = firstIngredient?.unit ?? '';
+  unitSpan.className = 'formato-unit';
+  unitSpan.textContent = '-';
 
   select.addEventListener('change', () => {
     const ing = ingredients.find(i => i.id === Number(select.value));
-    unitSpan.textContent = ing?.unit ?? '';
+    unitSpan.textContent = ing?.unit ?? '-';
   });
 
-  qtyWrapper.appendChild(input);
-  qtyWrapper.appendChild(unitSpan);
-  div.appendChild(select);
-  div.appendChild(qtyWrapper);
+  formatoWrapper.appendChild(input);
+  formatoWrapper.appendChild(unitSpan);
+  div.appendChild(selectWrapper);
+  div.appendChild(formatoWrapper);
   div.appendChild(makeRemoveIngredientRowBtn(div, null));
 
   ingredientSelectors.appendChild(div);
@@ -1845,45 +1958,29 @@ ingredientSelectors?.addEventListener('change', () => autoSaveRecipe());
 if (recipeForm) {
   recipeForm.addEventListener('submit', (e) => {
     e.preventDefault();
-
-    const ingredientRows = ingredientSelectors.querySelectorAll('.recipe-ingredient-row');
+    if (!editingRecipeId) return;
 
     const recipeIngredients = [];
-
-    ingredientRows.forEach((row) => {
+    ingredientSelectors?.querySelectorAll('.recipe-ingredient-row').forEach((row) => {
       const select = row.querySelector('select');
       const input = row.querySelector('input');
       if (!select || !input) return;
-
-      const ingredientId = select.value;
-      const quantity = input.value;
-
-      // 👇 Solo añadimos si ambos tienen valor
-      if (ingredientId && quantity) {
+      if (select.value && input.value) {
         recipeIngredients.push({
-          ingredientId: Number(ingredientId),
-          quantity: Number(quantity),
+          ingredientId: Number(select.value),
+          quantity: Number(input.value),
         });
       }
     });
 
-    // ✅ SOLO validamos el título
     if (!recipeNameInput.value.trim()) {
       alert('Rellena el nombre de la receta');
       return;
     }
 
-    if (editingRecipeId) {
-      const recipe = recipes.find((r) => r.id === editingRecipeId);
-      recipe.name = recipeNameInput.value.trim();
-      recipe.ingredients = recipeIngredients;
-    } else {
-      recipes.push({
-        id: Date.now(),
-        name: recipeNameInput.value.trim(),
-        ingredients: recipeIngredients, // puede ser []
-      });
-    }
+    const recipe = recipes.find((r) => r.id === editingRecipeId);
+    recipe.name = recipeNameInput.value.trim();
+    recipe.ingredients = recipeIngredients;
 
     saveRecipes();
     renderRecipes();
@@ -1947,7 +2044,7 @@ function renderRecipesTable(data) {
     `;
 
     const countCell = tr.querySelector('.recipe-table-count');
-    countCell.textContent = count;
+    countCell.textContent = count === 1 ? '1 ingrediente' : `${count} ingredientes`;
 
     tr.addEventListener('click', () => {
       document.querySelectorAll('.recipe-table tr.is-selected')
@@ -2021,6 +2118,9 @@ function startEditRecipe(recipeId) {
     const row = document.createElement('div');
     row.className = 'recipe-ingredient-row';
 
+    const selectWrapper = document.createElement('div');
+    selectWrapper.className = 'select-field';
+
     const select = document.createElement('select');
     const sortedForEdit = [...ingredients].sort((a, b) => a.name.localeCompare(b.name, 'es'));
     sortedForEdit.forEach((ingredient) => {
@@ -2033,36 +2133,36 @@ function startEditRecipe(recipeId) {
       select.appendChild(option);
     });
 
-    const qtyWrapper = document.createElement('div');
-    qtyWrapper.className = 'recipe-qty-wrapper';
+    selectWrapper.appendChild(select);
+
+    const formatoWrapper = document.createElement('div');
+    formatoWrapper.className = 'formato-wrapper';
 
     const input = document.createElement('input');
     input.type = 'number';
+    input.className = 'number-input';
     input.min = '0';
     input.placeholder = 'Cantidad';
     input.value = item.quantity;
 
     const unitSpan = document.createElement('span');
-    unitSpan.className = 'recipe-ingredient-unit';
+    unitSpan.className = 'formato-unit';
     const selectedIng = ingredients.find(i => i.id === item.ingredientId);
-    unitSpan.textContent = selectedIng?.unit ?? '';
+    unitSpan.textContent = selectedIng?.unit ?? '-';
 
     select.addEventListener('change', () => {
       const ing = ingredients.find(i => i.id === Number(select.value));
-      unitSpan.textContent = ing?.unit ?? '';
+      unitSpan.textContent = ing?.unit ?? '-';
     });
 
-    qtyWrapper.appendChild(input);
-    qtyWrapper.appendChild(unitSpan);
-    row.appendChild(select);
-    row.appendChild(qtyWrapper);
+    formatoWrapper.appendChild(input);
+    formatoWrapper.appendChild(unitSpan);
+    row.appendChild(selectWrapper);
+    row.appendChild(formatoWrapper);
     row.appendChild(makeRemoveIngredientRowBtn(row, item.ingredientId));
     ingredientSelectors.appendChild(row);
   });
 
-  if (saveRecipeBtn) saveRecipeBtn.classList.add('hidden');
-
-  if (deleteRecipeBtn) deleteRecipeBtn.classList.remove('hidden');
 
 }
 
@@ -2070,30 +2170,8 @@ function resetRecipeForm() {
   editingRecipeId = null;
   if (recipeForm) recipeForm.reset();
   if (ingredientSelectors) ingredientSelectors.innerHTML = '';
-  if (saveRecipeBtn) { saveRecipeBtn.textContent = 'Crear'; saveRecipeBtn.classList.remove('hidden'); }
-  if (deleteRecipeBtn) deleteRecipeBtn.classList.add('hidden');
 }
 
-if (deleteRecipeBtn) {
-  deleteRecipeBtn.addEventListener('click', () => {
-    if (!editingRecipeId) return;
-
-    const ok = confirm('¿Seguro que quieres eliminar esta receta?');
-    if (!ok) return;
-
-    recipes = recipes.filter((r) => r.id !== editingRecipeId);
-    saveRecipes();
-    renderRecipes();
-
-    // Opcional: limpiar calendario de esa receta (recomendado)
-    calendarEntries = calendarEntries.filter((e) => e.recipeId !== editingRecipeId);
-    saveCalendarEntries();
-    if (calendarList) renderCalendarEntries();
-    if (shoppingList && lastShoppingList) renderStoresOverview();
-
-    closeRecipePanel();
-  });
-}
 
 
 
@@ -3928,6 +4006,35 @@ document.getElementById('ingredientEditDeleteBtn')?.addEventListener('click', ()
     closeIngredientPanel();
     deleteIngredient(editingIngredientId);
     editingIngredientId = null;
+  }
+});
+
+const recipeEditDropdown = document.getElementById('recipeEditDropdown');
+
+document.getElementById('recipeEditMenuBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  recipeEditDropdown.hidden = !recipeEditDropdown.hidden;
+});
+
+document.addEventListener('click', () => {
+  if (recipeEditDropdown && !recipeEditDropdown.hidden) {
+    recipeEditDropdown.hidden = true;
+  }
+});
+
+document.getElementById('recipeEditDeleteBtn')?.addEventListener('click', () => {
+  recipeEditDropdown.hidden = true;
+  if (!editingRecipeId) return;
+  const recipe = recipes.find(r => r.id === editingRecipeId);
+  if (!recipe) return;
+  const ok = confirm(`¿Seguro que quieres eliminar "${recipe.name}"?`);
+  if (ok) {
+    recipes = recipes.filter(r => r.id !== editingRecipeId);
+    calendarEntries = calendarEntries.filter(e => e.recipeId !== editingRecipeId);
+    saveRecipes();
+    saveCalendarEntries();
+    closeRecipePanel();
+    renderRecipes();
   }
 });
 
