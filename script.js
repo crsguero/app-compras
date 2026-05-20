@@ -350,7 +350,6 @@ const formatoUnit = document.getElementById('formatoUnit');
 const pantryToggle = document.getElementById('pantryToggle');
 const minQuantityWrapper = document.getElementById('minQuantityWrapper');
 const minQuantityInput = document.getElementById('minQuantityInput');
-const deleteIngredientBtn = document.getElementById('deleteIngredientBtn');
 const ingredientModalTitle = document.getElementById('ingredientModalTitle');
 
 
@@ -393,7 +392,7 @@ if (openIngredientModalBtn) {
     if (newPantryToggle) newPantryToggle.checked = false;
     if (newMinQuantityWrapper) newMinQuantityWrapper.classList.add('hidden');
     if (newMinQuantityInput) newMinQuantityInput.required = false;
-    if (newFormatoUnit) newFormatoUnit.textContent = '';
+    if (newFormatoUnit) newFormatoUnit.textContent = '-';
     openModal(newIngredientModal);
   });
 }
@@ -408,7 +407,7 @@ newIngredientModal?.addEventListener('click', (e) => {
 
 if (newUnitInput && newFormatoUnit) {
   newUnitInput.addEventListener('change', () => {
-    newFormatoUnit.textContent = newUnitInput.value;
+    newFormatoUnit.textContent = newUnitInput.value || '-';
   });
 }
 
@@ -472,7 +471,7 @@ if (newIngredientForm) {
       newMinQuantityInput.required = false;
       newMinQuantityInput.value = '';
     }
-    if (newFormatoUnit) newFormatoUnit.textContent = '';
+    if (newFormatoUnit) newFormatoUnit.textContent = '-';
     closeModal(newIngredientModal);
   });
 }
@@ -489,7 +488,7 @@ document.getElementById('closeIngredientSheetBtn')?.addEventListener('click', ()
 
 if (unitInput && formatoUnit) {
   unitInput.addEventListener('change', () => {
-    formatoUnit.textContent = unitInput.value;
+    formatoUnit.textContent = unitInput.value || '-';
   });
 }
 
@@ -759,47 +758,27 @@ function renderIngredientsTable(raw) {
 
     // Unidad
     const unitTd = document.createElement('td');
-    unitTd.appendChild(makeInlineSelect(
-      [{ value: 'g', label: 'g' }, { value: 'ml', label: 'ml' }, { value: 'ud', label: 'ud' }, { value: 'rodaja', label: 'rodaja' }],
-      ingredient.unit,
-      v => { ingredient.unit = v; saveIngredients(); }
-    ));
+    unitTd.textContent = ingredient.unit || '';
     tr.appendChild(unitTd);
 
     // Ubicación
     const locTd = document.createElement('td');
-    locTd.appendChild(makeInlineSelect(
-      Object.entries(LOCATION_LABELS).map(([value, label]) => ({ value, label })),
-      ingredient.location,
-      v => { ingredient.location = v; saveIngredients(); }
-    ));
+    locTd.textContent = LOCATION_LABELS[ingredient.location] || ingredient.location || '';
     tr.appendChild(locTd);
 
     // Despensa
     const pantryTd = document.createElement('td');
-    pantryTd.appendChild(makeInlineSelect(
-      [{ value: 'true', label: 'Sí' }, { value: 'false', label: 'No' }],
-      String(!!ingredient.pantry),
-      v => { ingredient.pantry = v === 'true'; saveIngredients(); }
-    ));
+    pantryTd.textContent = ingredient.pantry ? 'Sí' : 'No';
     tr.appendChild(pantryTd);
 
     // Tipo
     const tipoTd = document.createElement('td');
-    tipoTd.appendChild(makeInlineSelect(
-      [{ value: 'semanal', label: 'Semanal' }, { value: 'mensual', label: 'Mensual' }],
-      ingredient.shoppingType,
-      v => { ingredient.shoppingType = v; saveIngredients(); }
-    ));
+    tipoTd.textContent = ingredient.shoppingType === 'semanal' ? 'Semanal' : ingredient.shoppingType === 'mensual' ? 'Mensual' : (ingredient.shoppingType || '');
     tr.appendChild(tipoTd);
 
     // Comercio
     const storeTd = document.createElement('td');
-    storeTd.appendChild(makeInlineSelect(
-      Object.entries(STORE_LABELS).map(([value, label]) => ({ value, label })),
-      ingredient.store,
-      v => { ingredient.store = v; saveIngredients(); }
-    ));
+    storeTd.textContent = STORE_LABELS[ingredient.store] || ingredient.store || '';
     tr.appendChild(storeTd);
 
     tr.style.cursor = 'pointer';
@@ -873,7 +852,7 @@ function startEditIngredient(id) {
   if (productInput) productInput.value = ingredient.product || '';
   if (productUnitSelect) productUnitSelect.value = ingredient.productUnit || '';
   if (formatoInput) formatoInput.value = ingredient.formato || '';
-  if (formatoUnit) formatoUnit.textContent = ingredient.unit || '';
+  if (formatoUnit) formatoUnit.textContent = ingredient.unit || '-';
   pantryToggle.checked = !!ingredient.pantry;
 
   if (ingredient.pantry) {
@@ -900,7 +879,6 @@ function startEditIngredient(id) {
   ingredientForm.querySelector('button[type="submit"]').textContent =
     'Guardar cambios';
 
-  if (deleteIngredientBtn) deleteIngredientBtn.classList.remove('hidden');
 
   // Recetas que usan este ingrediente
   const usedInRecipesEl = document.getElementById('ingredientUsedInRecipes');
@@ -911,15 +889,20 @@ function startEditIngredient(id) {
     const editIconSvg = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2a1.885 1.885 0 0 1 2.667 2.667L4.889 13.778 2 14l.222-2.889L11.333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
     if (matchingRecipes.length === 0) {
-      usedInRecipesEl.innerHTML = `
-        <p class="field-label-small">Usado en</p>
-        <p class="ingredient-recipe-empty">Este ingrediente no ha sido asociado a ninguna receta.</p>`;
+      usedInRecipesEl.innerHTML = '';
     } else {
       usedInRecipesEl.innerHTML = `
-        <p class="field-label-small">Usado en</p>
+        <p class="field-label-small"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.83337 14.1666L14.1667 5.83325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.83337 5.83325H14.1667V14.1666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Usado en</p>
         <ul class="ingredient-recipe-list">
           ${matchingRecipes.map((r) => `
             <li class="ingredient-recipe-row" data-recipe-id="${r.id}">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="ingredient-recipe-icon">
+                <path d="M11.6667 1.66675H5.00004C4.55801 1.66675 4.13409 1.84234 3.82153 2.1549C3.50897 2.46746 3.33337 2.89139 3.33337 3.33341V16.6667C3.33337 17.1088 3.50897 17.5327 3.82153 17.8453C4.13409 18.1578 4.55801 18.3334 5.00004 18.3334H15C15.4421 18.3334 15.866 18.1578 16.1786 17.8453C16.4911 17.5327 16.6667 17.1088 16.6667 16.6667V6.66675L11.6667 1.66675Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M11.6666 1.66675V6.66675H16.6666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M13.3333 10.8333H6.66663" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M13.3333 14.1667H6.66663" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8.33329 7.5H7.49996H6.66663" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <span class="ingredient-recipe-name">${r.name}</span>
               <button type="button" class="ingredient-recipe-edit-btn" aria-label="Editar receta">${editIconSvg}</button>
             </li>`).join('')}
@@ -1024,7 +1007,6 @@ renderShoppingDateRange();
   minQuantityInput.value = '';
   locationSelect.value = '';
 
-  if (deleteIngredientBtn) deleteIngredientBtn.classList.add('hidden');
 
   ingredientForm
     .querySelector('button[type="submit"]')
@@ -1078,19 +1060,6 @@ function autoSaveIngredient() {
   if (el) el.addEventListener('change', autoSaveIngredient);
 });
 
-if (deleteIngredientBtn) {
-  deleteIngredientBtn.addEventListener('click', () => {
-    if (!editingIngredientId) return;
-    const ingredient = ingredients.find(i => i.id === editingIngredientId);
-    if (!ingredient) return;
-    const ok = confirm(`¿Seguro que quieres eliminar "${ingredient.name}"?`);
-    if (ok) {
-      closeIngredientPanel();
-      deleteIngredient(editingIngredientId);
-      editingIngredientId = null;
-    }
-  });
-}
 
 renderIngredients();
 
@@ -3933,6 +3902,32 @@ document.getElementById('lista2SheetMenuBtn')?.addEventListener('click', (e) => 
 document.addEventListener('click', () => {
   if (lista2SheetDropdown && !lista2SheetDropdown.hidden) {
     lista2SheetDropdown.hidden = true;
+  }
+});
+
+const ingredientEditDropdown = document.getElementById('ingredientEditDropdown');
+
+document.getElementById('ingredientEditMenuBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ingredientEditDropdown.hidden = !ingredientEditDropdown.hidden;
+});
+
+document.addEventListener('click', () => {
+  if (ingredientEditDropdown && !ingredientEditDropdown.hidden) {
+    ingredientEditDropdown.hidden = true;
+  }
+});
+
+document.getElementById('ingredientEditDeleteBtn')?.addEventListener('click', () => {
+  ingredientEditDropdown.hidden = true;
+  if (!editingIngredientId) return;
+  const ingredient = ingredients.find(i => i.id === editingIngredientId);
+  if (!ingredient) return;
+  const ok = confirm(`¿Seguro que quieres eliminar "${ingredient.name}"?`);
+  if (ok) {
+    closeIngredientPanel();
+    deleteIngredient(editingIngredientId);
+    editingIngredientId = null;
   }
 });
 
