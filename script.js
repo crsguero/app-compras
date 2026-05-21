@@ -1917,7 +1917,6 @@ if (addIngredientBtn) {
 
 function autoSaveRecipe() {
   if (!editingRecipeId) return;
-  if (!window.matchMedia('(min-width: 768px)').matches) return;
 
   const name = recipeNameInput?.value.trim();
   if (!name) return;
@@ -2071,7 +2070,7 @@ function renderRecipes() {
     renderRecipesTable(filteredRecipes);
   } else {
     const ul = document.createElement('ul');
-    filteredRecipes.forEach((recipe) => {
+    [...filteredRecipes].sort((a, b) => a.name.localeCompare(b.name, 'es')).forEach((recipe) => {
       const li = document.createElement('li');
       li.className = 'recipe-row';
       li.dataset.id = recipe.id;
@@ -2087,7 +2086,8 @@ function renderRecipes() {
         </div>
       `;
       li.addEventListener('click', () => {
-        openRecipeDetailModal(recipe.id);
+        startEditRecipe(recipe.id);
+        openRecipePanel();
       });
       ul.appendChild(li);
     });
@@ -3355,110 +3355,6 @@ function renderCalendarRecipeSelect() {
 // -----------------------
 // MODAL DETALLE COCINADO
 // -----------------------
-const recipeDetailModal = document.getElementById('recipeDetailModal');
-const closeRecipeDetailModalBtn = document.getElementById('closeRecipeDetailModal');
-const recipeDetailTitle = document.getElementById('recipeDetailTitle');
-const recipeDetailIngredients = document.getElementById('recipeDetailIngredients');
-const recipeDetailEditBtn = document.getElementById('recipeDetailEditBtn');
-const recipeDetailDeleteBtn = document.getElementById('recipeDetailDeleteBtn');
-
-let selectedRecipeIdForDetail = null;
-
-function openRecipeDetailModal(recipeId) {
-  const recipe = recipes.find((r) => r.id === recipeId);
-  if (!recipe) return;
-
-  selectedRecipeIdForDetail = recipeId;
-
-  if (recipeDetailTitle) recipeDetailTitle.textContent = recipe.name;
-
-  if (recipeDetailIngredients) {
-    recipeDetailIngredients.innerHTML = '';
-
-    recipe.ingredients.forEach((item) => {
-      const ingredient = ingredients.find((i) => i.id === item.ingredientId);
-      if (!ingredient) return;
-
-      const li = document.createElement('li');
-      li.className = 'recipe-ingredient-row';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'recipe-ingredient-name';
-      nameEl.textContent = ingredient.name;
-
-      const qtyEl = document.createElement('span');
-      qtyEl.className = 'recipe-ingredient-qty';
-      qtyEl.textContent = `${item.quantity} ${ingredient.unit}`;
-
-      li.appendChild(nameEl);
-      li.appendChild(qtyEl);
-      recipeDetailIngredients.appendChild(li);
-    });
-
-    if (recipe.ingredients.length === 0) {
-      const li = document.createElement('li');
-      li.textContent = '(Sin ingredientes)';
-      recipeDetailIngredients.appendChild(li);
-    }
-  }
-
-  openModal(recipeDetailModal);
-}
-
-function closeRecipeDetailModal() {
-  closeModal(recipeDetailModal);
-  selectedRecipeIdForDetail = null;
-}
-
-// Cerrar con X
-if (closeRecipeDetailModalBtn) {
-  closeRecipeDetailModalBtn.addEventListener('click', closeRecipeDetailModal);
-}
-
-// Cerrar clic fuera
-if (recipeDetailModal) {
-  recipeDetailModal.addEventListener('click', (e) => {
-    if (e.target === recipeDetailModal) closeRecipeDetailModal();
-  });
-}
-
-// Editar desde detalle
-if (recipeDetailEditBtn) {
-  recipeDetailEditBtn.addEventListener('click', () => {
-    if (!selectedRecipeIdForDetail) return;
-
-    // Prepara el formulario de recetas con los datos
-    startEditRecipe(selectedRecipeIdForDetail);
-
-    // Cierra detalle y abre el panel/modal del formulario de receta
-    closeRecipeDetailModal();
-    if (isDesktop()) {
-      const tabId = 'recipes';
-      localStorage.setItem(ACTIVE_TAB_KEY, tabId);
-      tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
-      tabContents.forEach((s) => s.classList.toggle('active', s.id === tabId));
-    }
-    openRecipePanel();
-  });
-}
-
-// Eliminar desde detalle
-if (recipeDetailDeleteBtn) {
-  recipeDetailDeleteBtn.addEventListener('click', () => {
-    if (!selectedRecipeIdForDetail) return;
-
-    recipes = recipes.filter((r) => r.id !== selectedRecipeIdForDetail);
-    saveRecipes();
-    renderRecipes();
-
-    // Si hay calendario que usa esa receta, opcionalmente podrías limpiarlo aquí (si quieres)
-    // calendarEntries = calendarEntries.filter(e => e.recipeId !== selectedRecipeIdForDetail);
-    // saveCalendarEntries();
-    // renderCalendarEntries();
-
-    closeRecipeDetailModal();
-  });
-}
 
 function deleteIngredient(id) {
   ingredients = ingredients.filter((i) => i.id !== id);

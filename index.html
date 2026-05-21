@@ -456,6 +456,7 @@
         <path d="M3 18H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    <div class="header-title-row">
     <h2>Recetas</h2>
     <div class="header-actions">
       <div class="search-btn-wrapper" id="recipeSearchWrapper">
@@ -484,6 +485,7 @@
         </svg>
     </button>
     </div>
+    </div>
   </div>
 
   <div id="recipesBody">
@@ -498,9 +500,12 @@
 
     <div class="recipe-edit-action-bar">
       <button type="button" id="closeRecipeSheetBtn" class="recipe-sheet-close-btn" aria-label="Cerrar">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <div class="recipe-edit-menu-wrapper">
@@ -587,18 +592,6 @@
 </div>
 
 
-<div id="recipeDetailModal" class="modal hidden">
-  <div class="modal-content">
-    
-    <h2 id="recipeDetailTitle"></h2>
-    <ul id="recipeDetailIngredients"></ul>
-
-    <div class="modal-actions">
-      <button type="button" id="closeRecipeDetailModal" class="modal-close secondary">Cerrar</button>
-      <button type="button" id="recipeDetailEditBtn" class="primary">Editar</button>
-    </div>
-  </div>
-</div>
 
 
 
