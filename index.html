@@ -558,15 +558,15 @@
 <!-- Modal: Detalle cocinado -->
 
 <!-- Modal: Nueva receta -->
-<div id="newRecipeModal" class="modal hidden" aria-hidden="true">
+<div id="newRecipeModal" class="modal modal--form hidden" aria-hidden="true">
   <div class="modal-content modal__sheet">
     <div class="modal-header">
       <h2>Nueva receta</h2>
     </div>
     <form id="newRecipeForm">
 
-      <label for="newRecipeNameInput">Título</label>
-      <input type="text" id="newRecipeNameInput" class="text-input" placeholder="Introduce un título" required />
+      <label for="newRecipeNameInput">Nombre</label>
+      <input type="text" id="newRecipeNameInput" class="text-input" placeholder="Introduce un nombre..." required />
 
       <label class="recipe-section-label">Ingredientes</label>
       <div id="newRecipeIngredientSelectors"></div>
@@ -615,6 +615,7 @@
         <path d="M3 18H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    <div class="header-title-row">
     <h2>Ingredientes</h2>
     <div class="header-actions">
       <div class="search-btn-wrapper" id="ingredientSearchWrapper">
@@ -657,6 +658,7 @@
         </svg>
       </button>
     </div>
+    </div>
   </div>
 
 <div id="ingredientsBody">
@@ -670,9 +672,12 @@
 
       <div class="ingredient-edit-action-bar">
         <button type="button" id="closeIngredientSheetBtn" class="ingredient-sheet-close-btn" aria-label="Cerrar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <div class="ingredient-edit-menu-wrapper">
@@ -808,7 +813,7 @@
 </section>
 
 <!-- Modal: Nuevo ingrediente -->
-<div id="newIngredientModal" class="modal hidden" aria-hidden="true">
+<div id="newIngredientModal" class="modal modal--form hidden" aria-hidden="true">
   <div class="modal-content modal__sheet">
     <div class="modal-header">
       <h2>Nuevo ingrediente</h2>
@@ -920,24 +925,6 @@
 
 <!-- Modal: Detalle ingrediente -->
 
-<div id="ingredientDetailModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="ingredientDetailTitle"></h2>
-
-      <button id="closeIngredientDetailModal" type="button" class="modal-close">
-        ✕
-      </button>
-    </div>
-
-    <div id="ingredientDetailMeta" class="modal-meta"></div>
-
-    <div class="modal-actions">
-      <button id="ingredientDetailEditBtn" type="button">Editar</button>
-      <button id="ingredientDetailDeleteBtn" type="button" class="danger">Eliminar</button>
-    </div>
-  </div>
-</div>
 
 <!-- Modal: Confirmación eliminación entrada calendario -->
 <div id="deleteCalendarConfirmModal" class="confirm-modal-overlay hidden">

@@ -821,7 +821,7 @@ function renderIngredientsList(sortedIngredients) {
     `;
 
     li.addEventListener('click', () => {
-      openIngredientDetailModal(ingredient.id);
+      startEditIngredient(ingredient.id);
     });
 
     ul.appendChild(li);
@@ -1016,7 +1016,6 @@ renderShoppingDateRange();
 
 function autoSaveIngredient() {
   if (!editingIngredientId) return;
-  if (!window.matchMedia('(min-width: 768px)').matches) return;
 
   const ingredient = ingredients.find((i) => i.id === editingIngredientId);
   if (!ingredient) return;
@@ -2044,7 +2043,7 @@ function renderRecipesTable(data) {
     `;
 
     const countCell = tr.querySelector('.recipe-table-count');
-    countCell.textContent = count === 1 ? '1 ingrediente' : `${count} ingredientes`;
+    countCell.textContent = count === 0 ? '-' : count === 1 ? '1 ingrediente' : `${count} ingredientes`;
 
     tr.addEventListener('click', () => {
       document.querySelectorAll('.recipe-table tr.is-selected')
@@ -3461,78 +3460,6 @@ if (recipeDetailDeleteBtn) {
   });
 }
 
-// -----------------------
-// MODAL DETALLE INGREDIENTE
-// -----------------------
-const ingredientDetailModal = document.getElementById('ingredientDetailModal');
-const closeIngredientDetailModalBtn = document.getElementById('closeIngredientDetailModal');
-const ingredientDetailTitle = document.getElementById('ingredientDetailTitle');
-const ingredientDetailMeta = document.getElementById('ingredientDetailMeta');
-const ingredientDetailEditBtn = document.getElementById('ingredientDetailEditBtn');
-const ingredientDetailDeleteBtn = document.getElementById('ingredientDetailDeleteBtn');
-
-let selectedIngredientIdForDetail = null;
-
-function openIngredientDetailModal(ingredientId) {
-  const ingredient = ingredients.find((i) => i.id === ingredientId);
-  if (!ingredient) return;
-
-  selectedIngredientIdForDetail = ingredientId;
-
-  if (ingredientDetailTitle) {
-    ingredientDetailTitle.textContent = ingredient.name;
-  }
-
-  // Opcional: mostrar info extra
-  if (ingredientDetailMeta) {
-    const storeLabel = (STORE_LABELS && ingredient.store) ? (STORE_LABELS[ingredient.store] || ingredient.store) : (ingredient.store || '');
-    const locationLabel = (LOCATION_LABELS && ingredient.location) ? (LOCATION_LABELS[ingredient.location] || ingredient.location) : (ingredient.location || '');
-
-    const parts = [];
-    if (ingredient.unit) parts.push(`Unidad: ${ingredient.unit}`);
-    if (storeLabel) parts.push(`Comercio: ${storeLabel}`);
-    if (locationLabel) parts.push(`Ubicación: ${locationLabel}`);
-    if (ingredient.pantry) parts.push(`Despensa: Sí`);
-    if (ingredient.pantry && ingredient.minQuantity != null) parts.push(`Mínimo: ${ingredient.minQuantity}`);
-
-    ingredientDetailMeta.textContent = parts.join(' · ');
-  }
-
-  openModal(ingredientDetailModal);
-}
-
-function closeIngredientDetailModal() {
-  closeModal(ingredientDetailModal);
-  selectedIngredientIdForDetail = null;
-}
-
-if (closeIngredientDetailModalBtn) {
-  closeIngredientDetailModalBtn.addEventListener('click', closeIngredientDetailModal);
-}
-
-if (ingredientDetailModal) {
-  ingredientDetailModal.addEventListener('click', (e) => {
-    if (e.target === ingredientDetailModal) closeIngredientDetailModal();
-  });
-}
-
-// Editar desde detalle
-if (ingredientDetailEditBtn) {
-  ingredientDetailEditBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const id = selectedIngredientIdForDetail; // guardamos el id antes de cerrar
-    if (!id) return;
-
-    closeIngredientDetailModal();
-
-    setTimeout(() => {
-      startEditIngredient(id);
-    }, 380);
-  });
-}
-
 function deleteIngredient(id) {
   ingredients = ingredients.filter((i) => i.id !== id);
   saveIngredients();
@@ -3552,16 +3479,6 @@ function deleteIngredient(id) {
   renderLocationsOverview();
 }
 
-if (ingredientDetailDeleteBtn) {
-  ingredientDetailDeleteBtn.addEventListener('click', () => {
-    if (!selectedIngredientIdForDetail) return;
-    const ok = confirm('¿Seguro que quieres eliminar este ingrediente?');
-    if (!ok) return;
-    const id = selectedIngredientIdForDetail;
-    closeIngredientDetailModal();
-    deleteIngredient(id);
-  });
-}
 
 
 
