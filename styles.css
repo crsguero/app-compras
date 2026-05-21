@@ -2632,6 +2632,13 @@ select:has(option[value=""]:checked) {
   margin-bottom: 24px;
 }
 
+#ingredientModalTitle {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 .recipe-edit-panel h2 {
   font-size: 24px;
   line-height: 32px;
@@ -3339,12 +3346,6 @@ label.toggle input[type="checkbox"]:checked::after {
     color: var(--color-secondary);
   }
 
-  #ingredientModalTitle {
-    font-size: 24px;
-    line-height: 32px;
-    font-weight: 600;
-    color: var(--color-primary);
-  }
 
   #closeIngredientModal {
     display: none;
