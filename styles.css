@@ -3429,6 +3429,13 @@ label.toggle input[type="checkbox"]:checked::after {
     padding-bottom: 24px;
   }
 
+  #recipes .header-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    width: 100%;
+  }
+
   #recipesMain {
     flex: 1;
     min-width: 0;
