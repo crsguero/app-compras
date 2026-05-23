@@ -107,11 +107,19 @@
           <path d="M3 18H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <button type="button" id="openLista2Modal" class="lista2-new-btn">+ Nueva lista</button>
     </div>
     <div class="lista2-list-title-row">
       <h2>Listas</h2>
-      <button type="button" id="openLista2ModalDesktop" class="lista2-new-btn">+ Nueva lista</button>
+      <button type="button" id="openLista2Modal" class="lista2-new-btn" aria-label="Nueva lista">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
+        </svg>
+      </button>
+      <button type="button" id="openLista2ModalDesktop" class="lista2-new-btn" aria-label="Nueva lista">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
     <div id="lista2ItemsContainer"></div>
   </div>
@@ -329,77 +337,19 @@
         <path d="M3 18H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    <div class="header-title-row">
     <h2>Planificación</h2>
+    <div class="header-actions">
     <button type="button" id="openCalendarModal" class="icon-btn" aria-label="Añadir al calendario">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
         </svg>
     </button>
+    </div>
+    </div>
   </div>
 
-  <!-- Modal - Creación ingesta -->
-
-  <div id="calendarModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content modal__sheet">
-      
-      <div class="modal-header">
-        <h2 id="calendarModalTitle">Añadir cocinado</h2>
-      </div>
-
-      <form id="calendarForm">
-        
-        <div class="select-field">
-          <label>Receta</label>
-          <select id="calendarRecipe" required></select>
-        </div>
-
-        <div class="select-field">
-          <label for="calendarMeal">Ingesta</label>
-          <select id="calendarMeal" required>
-            <option value="">Selecciona una ingesta</option>
-            <option value="desayuno">Desayuno</option>
-            <option value="media-manana">Media mañana</option>
-            <option value="almuerzo">Almuerzo</option>
-            <option value="merienda">Merienda</option>
-            <option value="cena">Cena</option>
-          </select>
-        </div>
-
-        <div class="date-picker">
-          <label>Fecha</label>
-          <input type="date" id="calendarDate" required />
-        </div>
-        
-        <div class="select-field">
-          <label for="calendarRepeat">Repetir</label>
-          <select id="calendarRepeat" required>
-            <option value="never">Nunca</option>
-            <option value="daily">Diariamente</option>
-            <option value="weekly">Semanalmente</option>
-          </select>
-        </div>
-
-        <div id="weekdayPicker" class="weekday-picker hidden">
-          <button type="button" class="weekday-btn" data-day="1">L</button>
-          <button type="button" class="weekday-btn" data-day="2">M</button>
-          <button type="button" class="weekday-btn" data-day="3">X</button>
-          <button type="button" class="weekday-btn" data-day="4">J</button>
-          <button type="button" class="weekday-btn" data-day="5">V</button>
-          <button type="button" class="weekday-btn" data-day="6">S</button>
-          <button type="button" class="weekday-btn" data-day="0">D</button>
-        </div>
-
-        <button type="button" id="deleteCalendarEntryBtn" class="danger-btn hidden delete">Eliminar cocinado</button>
-
-        <div class="modal-actions">
-          <button type="button" id="closeCalendarModal" class="secondary" aria-label="Cerrar">Cancelar</button>
-          <button type="submit" id="calendarSubmitBtn" class="primary">Añadir</button>
-        </div>
-        
-      </form>
-
-    </div>
-</div>
+  <!-- Panel - Creación/edición ingesta -->
 
 
   <span id="calendarMonthLabel" class="calendar-month-label"></span>
@@ -416,6 +366,136 @@
 
   <ul id="calendarList"></ul>
 
+  <!-- Modal - Añadir cocinado -->
+  <div id="calendarModal" class="modal modal--form hidden" aria-hidden="true">
+    <div class="modal-content modal__sheet">
+      <div class="modal-header">
+        <h2>Añadir cocinado</h2>
+      </div>
+      <form id="calendarForm">
+        <div class="select-field">
+          <label>Receta</label>
+          <select id="calendarRecipe" required></select>
+        </div>
+        <div class="select-field">
+          <label for="calendarMeal">Ingesta</label>
+          <select id="calendarMeal" required>
+            <option value="">Selecciona una ingesta...</option>
+            <option value="desayuno">Desayuno</option>
+            <option value="media-manana">Media mañana</option>
+            <option value="almuerzo">Almuerzo</option>
+            <option value="merienda">Merienda</option>
+            <option value="cena">Cena</option>
+          </select>
+        </div>
+        <div class="date-picker">
+          <label>Fecha</label>
+          <input type="date" id="calendarDate" required />
+        </div>
+        <div class="select-field">
+          <label for="calendarRepeat">Repetir</label>
+          <select id="calendarRepeat" required>
+            <option value="never">Nunca</option>
+            <option value="daily">Diariamente</option>
+            <option value="weekly">Semanalmente</option>
+          </select>
+        </div>
+        <div id="weekdayPicker" class="weekday-picker hidden">
+          <button type="button" class="weekday-btn" data-day="1">L</button>
+          <button type="button" class="weekday-btn" data-day="2">M</button>
+          <button type="button" class="weekday-btn" data-day="3">X</button>
+          <button type="button" class="weekday-btn" data-day="4">J</button>
+          <button type="button" class="weekday-btn" data-day="5">V</button>
+          <button type="button" class="weekday-btn" data-day="6">S</button>
+          <button type="button" class="weekday-btn" data-day="0">D</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="closeCalendarModal" class="secondary">Cancelar</button>
+          <button type="submit" id="calendarSubmitBtn" class="primary">Añadir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Panel - Editar cocinado -->
+  <div id="calendarEditPanel" class="calendar-edit-panel">
+    <div class="calendar-edit-panel-inner">
+
+      <div class="calendar-edit-action-bar">
+        <button type="button" id="closeCalendarEditPanel" class="calendar-sheet-close-btn" aria-label="Cerrar">
+          <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div id="calendarEditMenuWrapper" class="calendar-edit-menu-wrapper">
+          <button type="button" id="calendarEditMenuBtn" aria-label="Opciones">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 13C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11C18.4477 11 18 11.4477 18 12C18 12.5523 18.4477 13 19 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 13C5.55228 13 6 12.5523 6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div id="calendarEditDropdown" class="actions-dropdown" hidden>
+            <button type="button" id="deleteCalendarEntryBtn" aria-label="Eliminar cocinado">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 5H4.16667H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15.8334 4.99996V16.6666C15.8334 17.1087 15.6578 17.5326 15.3453 17.8451C15.0327 18.1577 14.6088 18.3333 14.1667 18.3333H5.83341C5.39139 18.3333 4.96746 18.1577 4.6549 17.8451C4.34234 17.5326 4.16675 17.1087 4.16675 16.6666V4.99996M6.66675 4.99996V3.33329C6.66675 2.89127 6.84234 2.46734 7.1549 2.15478C7.46746 1.84222 7.89139 1.66663 8.33341 1.66663H11.6667C12.1088 1.66663 12.5327 1.84222 12.8453 2.15478C13.1578 2.46734 13.3334 2.89127 13.3334 3.33329V4.99996" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8.33325 9.16663V14.1666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M11.6667 9.16663V14.1666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Eliminar cocinado</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h2>Editar cocinado</h2>
+
+      <form id="calendarEditForm">
+        <div class="select-field">
+          <label>Receta</label>
+          <select id="calendarEditRecipe" required></select>
+        </div>
+        <div class="select-field">
+          <label for="calendarEditMeal">Ingesta</label>
+          <select id="calendarEditMeal" required>
+            <option value="">Selecciona una ingesta...</option>
+            <option value="desayuno">Desayuno</option>
+            <option value="media-manana">Media mañana</option>
+            <option value="almuerzo">Almuerzo</option>
+            <option value="merienda">Merienda</option>
+            <option value="cena">Cena</option>
+          </select>
+        </div>
+        <div class="date-picker">
+          <label>Fecha</label>
+          <input type="date" id="calendarEditDate" required />
+        </div>
+        <div class="select-field">
+          <label for="calendarEditRepeat">Repetir</label>
+          <select id="calendarEditRepeat" required>
+            <option value="never">Nunca</option>
+            <option value="daily">Diariamente</option>
+            <option value="weekly">Semanalmente</option>
+          </select>
+        </div>
+        <div id="editWeekdayPicker" class="weekday-picker hidden">
+          <button type="button" class="weekday-btn" data-day="1">L</button>
+          <button type="button" class="weekday-btn" data-day="2">M</button>
+          <button type="button" class="weekday-btn" data-day="3">X</button>
+          <button type="button" class="weekday-btn" data-day="4">J</button>
+          <button type="button" class="weekday-btn" data-day="5">V</button>
+          <button type="button" class="weekday-btn" data-day="6">S</button>
+          <button type="button" class="weekday-btn" data-day="0">D</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
 
    <!-- Modal - Detalle ingesta ingesta -->
 
