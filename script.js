@@ -2558,11 +2558,7 @@ weekDates.forEach((date) => {
             row.appendChild(repeatRow);
           }
 
-          if (window.innerWidth >= 768) {
-            row.addEventListener('click', () => openCalendarModalPreset(date, entry.meal, 'edit', entry.recipeId, entry.repeat ?? 'never', entry));
-          } else {
-            row.addEventListener('click', () => openCalendarRecipeModal(entry));
-          }
+          row.addEventListener('click', () => openCalendarModalPreset(date, entry.meal, 'edit', entry.recipeId, entry.repeat ?? 'never', entry));
           group.appendChild(row);
         });
       }
@@ -2621,7 +2617,7 @@ weekDates.forEach((date) => {
 
       recipeLi.appendChild(mealEl);
       recipeLi.appendChild(recipeNameEl);
-      recipeLi.addEventListener('click', () => openCalendarRecipeModal(entry));
+      recipeLi.addEventListener('click', () => openCalendarModalPreset(date, entry.meal, 'edit', entry.recipeId, entry.repeat ?? 'never', entry));
       ul.appendChild(recipeLi);
     });
 
