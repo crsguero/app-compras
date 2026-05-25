@@ -417,6 +417,87 @@
     </div>
   </div>
 
+  <!-- Panel - Detalle cocinado (solo lectura, móvil) -->
+  <div id="calendarDetailPanel" class="calendar-edit-panel">
+    <div class="calendar-edit-panel-inner">
+
+      <div class="calendar-edit-action-bar">
+        <button type="button" id="closeCalendarDetailPanel" class="calendar-sheet-close-btn" aria-label="Cerrar">
+          <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div id="calendarDetailMenuWrapper" class="calendar-edit-menu-wrapper">
+          <button type="button" id="calendarDetailMenuBtn" aria-label="Opciones">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 13C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11C18.4477 11 18 11.4477 18 12C18 12.5523 18.4477 13 19 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 13C5.55228 13 6 12.5523 6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div id="calendarDetailDropdown" class="actions-dropdown" hidden>
+            <button type="button" id="editRecipeFromDetailPanelBtn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14.1667 2.50004C14.3876 2.27912 14.6498 2.10368 14.9387 1.98381C15.2276 1.86394 15.5373 1.80212 15.85 1.80212C16.1628 1.80212 16.4725 1.86394 16.7614 1.98381C17.0502 2.10368 17.3124 2.27912 17.5334 2.50004C17.7543 2.72096 17.9297 2.98319 18.0496 3.27206C18.1695 3.56093 18.2313 3.87065 18.2313 4.18337C18.2313 4.4961 18.1695 4.80581 18.0496 5.09469C17.9297 5.38356 17.7543 5.64578 17.5334 5.86671L6.25004 17.15L1.66671 18.3334L2.85004 13.75L14.1667 2.50004Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Editar receta</span>
+            </button>
+            <button type="button" id="editFromDetailPanelBtn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14.1667 2.50004C14.3876 2.27912 14.6498 2.10368 14.9387 1.98381C15.2276 1.86394 15.5373 1.80212 15.85 1.80212C16.1628 1.80212 16.4725 1.86394 16.7614 1.98381C17.0502 2.10368 17.3124 2.27912 17.5334 2.50004C17.7543 2.72096 17.9297 2.98319 18.0496 3.27206C18.1695 3.56093 18.2313 3.87065 18.2313 4.18337C18.2313 4.4961 18.1695 4.80581 18.0496 5.09469C17.9297 5.38356 17.7543 5.64578 17.5334 5.86671L6.25004 17.15L1.66671 18.3334L2.85004 13.75L14.1667 2.50004Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Editar cocinado</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="calendarDetailTitle"></h2>
+
+      <h3 class="calendar-detail-section-heading">Ingredientes</h3>
+      <ul id="calendarDetailIngredients" class="calendar-detail-ingredients-list"></ul>
+
+    </div>
+  </div>
+
+  <!-- Panel - Editar receta desde Planificación (móvil) -->
+  <div id="calendarRecipeEditPanel" class="calendar-edit-panel">
+    <div class="calendar-edit-panel-inner">
+
+      <div class="calendar-edit-action-bar">
+        <button type="button" id="closeCalendarRecipeEditPanel" class="calendar-sheet-close-btn" aria-label="Volver">
+          <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <h2>Editar receta</h2>
+
+      <form id="calendarRecipeEditForm">
+        <label>Nombre</label>
+        <input type="text" id="calendarRecipeEditNameInput" class="text-input" placeholder="Introduce un nombre..." required />
+        <label class="recipe-section-label">Ingredientes</label>
+        <div id="calendarRecipeEditIngredients"></div>
+        <button id="calendarRecipeEditAddIngredient" class="secondary" type="button">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.8138 16.4324C10.8138 16.5843 10.7769 16.721 10.7031 16.8425C10.6293 16.9641 10.5295 17.0617 10.4036 17.1355C10.2821 17.2093 10.1454 17.2462 9.99349 17.2462C9.85026 17.2462 9.71571 17.2093 9.58984 17.1355C9.46398 17.0617 9.36415 16.9641 9.29036 16.8425C9.22092 16.721 9.1862 16.5843 9.1862 16.4324V4.16024C9.1862 4.01701 9.22092 3.88246 9.29036 3.75659C9.36415 3.63072 9.46398 3.5309 9.58984 3.45711C9.71571 3.38333 9.85026 3.34644 9.99349 3.34644C10.1454 3.34644 10.2821 3.38333 10.4036 3.45711C10.5295 3.5309 10.6293 3.63072 10.7031 3.75659C10.7769 3.88246 10.8138 4.01701 10.8138 4.16024V16.4324ZM3.86068 11.1134C3.71311 11.1134 3.57639 11.0765 3.45052 11.0027C3.32899 10.9289 3.23134 10.8312 3.15755 10.7097C3.08377 10.5838 3.04688 10.4471 3.04688 10.2996C3.04688 10.1477 3.08377 10.0109 3.15755 9.8894C3.23134 9.76788 3.32899 9.67022 3.45052 9.59644C3.57639 9.52265 3.71311 9.48576 3.86068 9.48576H16.1328C16.2847 9.48576 16.4214 9.52265 16.543 9.59644C16.6645 9.67022 16.7622 9.76788 16.8359 9.8894C16.9097 10.0109 16.9466 10.1477 16.9466 10.2996C16.9466 10.4471 16.9097 10.5838 16.8359 10.7097C16.7622 10.8312 16.6645 10.9289 16.543 11.0027C16.4214 11.0765 16.2847 11.1134 16.1328 11.1134H3.86068Z" fill="currentColor"/>
+          </svg>
+          Añadir ingrediente
+        </button>
+      </form>
+
+    </div>
+  </div>
+
   <!-- Panel - Editar cocinado -->
   <div id="calendarEditPanel" class="calendar-edit-panel">
     <div class="calendar-edit-panel-inner">

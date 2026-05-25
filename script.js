@@ -35,6 +35,7 @@ if (ingredients.some(i => !i.shoppingType)) {
 let recipes = safeLoad('recipes', []);
 let editingRecipeId = null;
 let calendarEntries = safeLoad('calendarEntries', []);
+let calendarCooked   = safeLoad('calendarCooked',  {});
 let purchasedItems = safeLoad('purchasedItems', {});
 let lastShoppingList = safeLoad('lastShoppingList', null);
 let lista2Items = safeLoad('lista2Items', []);
@@ -167,6 +168,19 @@ calendarEntries.forEach((e) => {
 
 if (calendarEntries.length > 0) saveCalendarEntries();
 
+// Limpiar calendarCooked de fechas pasadas (solo localStorage; Firebase se carga después)
+{
+  const cookedFiltered = {};
+  Object.keys(calendarCooked).forEach(k => {
+    const datePart = k.substring(0, 10);
+    if (!isValidISODateString(datePart) || datePart >= _currentWeekStart) {
+      cookedFiltered[k] = calendarCooked[k];
+    }
+  });
+  calendarCooked = cookedFiltered;
+  localStorage.setItem('calendarCooked', JSON.stringify(calendarCooked));
+}
+
 // -----------------------
 // GUARDAR EN LOCALSTORAGE
 // -----------------------
@@ -183,6 +197,11 @@ function saveRecipes() {
 function saveCalendarEntries() {
   localStorage.setItem('calendarEntries', JSON.stringify(calendarEntries));
   db.ref('compra/calendarEntries').set(calendarEntries);
+}
+
+function saveCalendarCooked() {
+  localStorage.setItem('calendarCooked', JSON.stringify(calendarCooked));
+  db.ref('compra/calendarCooked').set(calendarCooked);
 }
 
 function saveLista2Items() {
@@ -1476,6 +1495,13 @@ const confirmDeleteAllBtn = document.getElementById('confirmDeleteAllBtn');
 const confirmDeleteCancelBtn = document.getElementById('confirmDeleteCancelBtn');
 let _calendarEditingEntry = null;
 
+// Panel de detalle (solo lectura, móvil)
+const calendarDetailPanel      = document.getElementById('calendarDetailPanel');
+const calendarDetailTitle      = document.getElementById('calendarDetailTitle');
+const calendarDetailIngredients = document.getElementById('calendarDetailIngredients');
+const calendarDetailDropdown   = document.getElementById('calendarDetailDropdown');
+let _viewingCalendarEntry = null;
+
 // Panel de edición: abrir / cerrar
 const planningSection = document.getElementById('planning');
 
@@ -1486,9 +1512,170 @@ function openCalendarPanel() {
 
 function closeCalendarPanel() {
   calendarEditPanel?.classList.remove('is-open');
-  planningSection?.classList.remove('panel-open');
   if (calendarEditDropdown) calendarEditDropdown.hidden = true;
+  if (calendarDetailPanel?.classList.contains('is-open') && _viewingCalendarEntry) {
+    // Vinimos desde el panel de detalle — refrescar y volver a él
+    openCalendarDetailPanel(_viewingCalendarEntry);
+  } else {
+    planningSection?.classList.remove('panel-open');
+  }
 }
+
+// Panel de detalle: abrir / cerrar
+const BOX_ICON_SVG = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 13.3334V6.66675C17.4997 6.37448 17.4225 6.08742 17.2763 5.83438C17.13 5.58134 16.9198 5.37122 16.6667 5.22508L10.8333 1.89175C10.58 1.74547 10.2926 1.66846 10 1.66846C9.70744 1.66846 9.42003 1.74547 9.16667 1.89175L3.33333 5.22508C3.08022 5.37122 2.86998 5.58134 2.72372 5.83438C2.57745 6.08742 2.5003 6.37448 2.5 6.66675V13.3334C2.5003 13.6257 2.57745 13.9127 2.72372 14.1658C2.86998 14.4188 3.08022 14.6289 3.33333 14.7751L9.16667 18.1084C9.42003 18.2547 9.70744 18.3317 10 18.3317C10.2926 18.3317 10.58 18.2547 10.8333 18.1084L16.6667 14.7751C16.9198 14.6289 17.13 14.4188 17.2763 14.1658C17.4225 13.9127 17.4997 13.6257 17.5 13.3334Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.72498 5.80005L9.99998 10.0084L17.275 5.80005" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 18.4V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function openCalendarDetailPanel(entry) {
+  _viewingCalendarEntry = entry;
+  const recipe = recipes.find(r => r.id === entry.recipeId);
+  if (!recipe) return;
+
+  if (calendarDetailTitle) calendarDetailTitle.textContent = recipe.name;
+
+  if (calendarDetailIngredients) {
+    calendarDetailIngredients.innerHTML = '';
+    const items = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+    if (items.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'calendar-detail-ingredient-empty';
+      empty.textContent = 'Sin ingredientes';
+      calendarDetailIngredients.appendChild(empty);
+    } else {
+      items.forEach(item => {
+        const ing = ingredients.find(i => i.id === item.ingredientId);
+        if (!ing) return;
+        const li = document.createElement('li');
+        li.className = 'calendar-detail-ingredient';
+        li.innerHTML = `<span class="calendar-detail-ingredient-icon" aria-hidden="true">${BOX_ICON_SVG}</span><span class="calendar-detail-ingredient-name">${ing.name}</span><span class="calendar-detail-ingredient-qty">${item.quantity} ${ing.unit}</span>`;
+        calendarDetailIngredients.appendChild(li);
+      });
+    }
+  }
+
+  if (calendarDetailDropdown) calendarDetailDropdown.hidden = true;
+  calendarDetailPanel?.classList.add('is-open');
+  planningSection?.classList.add('panel-open');
+}
+
+function closeCalendarDetailPanel() {
+  calendarDetailPanel?.classList.remove('is-open');
+  if (!calendarEditPanel?.classList.contains('is-open')) {
+    planningSection?.classList.remove('panel-open');
+  }
+  if (calendarDetailDropdown) calendarDetailDropdown.hidden = true;
+  _viewingCalendarEntry = null;
+}
+
+// ── Panel edición de receta desde Planificación (móvil) ──────────────────────
+const calendarRecipeEditPanel = document.getElementById('calendarRecipeEditPanel');
+const calendarRecipeEditNameInput = document.getElementById('calendarRecipeEditNameInput');
+const calendarRecipeEditIngredientsEl = document.getElementById('calendarRecipeEditIngredients');
+
+function _makeCalendarIngredientRow(item) {
+  const div = document.createElement('div');
+  div.className = 'recipe-ingredient-row';
+
+  const selectWrapper = document.createElement('div');
+  selectWrapper.className = 'select-field';
+  const select = document.createElement('select');
+  const sortedIngs = [...ingredients].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  sortedIngs.forEach(ing => {
+    const opt = document.createElement('option');
+    opt.value = ing.id;
+    opt.textContent = ing.name;
+    if (item && ing.id === item.ingredientId) opt.selected = true;
+    select.appendChild(opt);
+  });
+  selectWrapper.appendChild(select);
+
+  const formatoWrapper = document.createElement('div');
+  formatoWrapper.className = 'formato-wrapper';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'number-input';
+  input.placeholder = 'Cantidad';
+  input.min = '1';
+  if (item) input.value = item.quantity;
+  const unitSpan = document.createElement('span');
+  unitSpan.className = 'formato-unit';
+  const currentIng = item ? ingredients.find(i => i.id === item.ingredientId) : null;
+  unitSpan.textContent = currentIng?.unit || '-';
+
+  select.addEventListener('change', () => {
+    const ing = ingredients.find(i => i.id === Number(select.value));
+    unitSpan.textContent = ing?.unit ?? '-';
+    autoSaveCalendarRecipeEdit();
+  });
+  input.addEventListener('change', () => autoSaveCalendarRecipeEdit());
+
+  formatoWrapper.appendChild(input);
+  formatoWrapper.appendChild(unitSpan);
+  div.appendChild(selectWrapper);
+  div.appendChild(formatoWrapper);
+  div.appendChild(makeRemoveIngredientRowBtn(div, item ? item.ingredientId : null));
+  return div;
+}
+
+function autoSaveCalendarRecipeEdit() {
+  if (!editingRecipeId) return;
+  const name = calendarRecipeEditNameInput?.value.trim();
+  if (!name) return;
+  const recipe = recipes.find(r => r.id === editingRecipeId);
+  if (!recipe) return;
+
+  const recipeIngredients = [];
+  calendarRecipeEditIngredientsEl?.querySelectorAll('.recipe-ingredient-row').forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    if (sel?.value && inp?.value) {
+      recipeIngredients.push({ ingredientId: Number(sel.value), quantity: Number(inp.value) });
+    }
+  });
+
+  recipe.name = name;
+  recipe.ingredients = recipeIngredients;
+  saveRecipes();
+  renderRecipes();
+  if (calendarList) renderCalendarEntries();
+}
+
+function openCalendarRecipeEdit(recipeId) {
+  const recipe = recipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+  editingRecipeId = recipeId;
+
+  if (calendarRecipeEditNameInput) calendarRecipeEditNameInput.value = recipe.name;
+  if (calendarRecipeEditIngredientsEl) {
+    calendarRecipeEditIngredientsEl.innerHTML = '';
+    (recipe.ingredients || []).forEach(item => {
+      const row = _makeCalendarIngredientRow(item);
+      calendarRecipeEditIngredientsEl.appendChild(row);
+    });
+  }
+
+  calendarRecipeEditPanel?.classList.add('is-open');
+}
+
+function closeCalendarRecipeEditPanel() {
+  autoSaveCalendarRecipeEdit();
+  calendarRecipeEditPanel?.classList.remove('is-open');
+  // Refrescar el panel de detalle con los nuevos datos de la receta
+  if (_viewingCalendarEntry) {
+    const entry = _viewingCalendarEntry;
+    openCalendarDetailPanel(entry);
+  }
+}
+
+document.getElementById('closeCalendarRecipeEditPanel')?.addEventListener('click', closeCalendarRecipeEditPanel);
+
+document.getElementById('calendarRecipeEditAddIngredient')?.addEventListener('click', () => {
+  if (!calendarRecipeEditIngredientsEl) return;
+  if (ingredients.length === 0) { alert('Añade primero algún ingrediente'); return; }
+  const row = _makeCalendarIngredientRow(null);
+  calendarRecipeEditIngredientsEl.appendChild(row);
+});
+
+document.getElementById('calendarRecipeEditForm')?.addEventListener('submit', e => e.preventDefault());
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Fecha en el panel de edición
 function setCalendarEditDate(value) {
@@ -1560,6 +1747,41 @@ document.addEventListener('click', () => {
   if (calendarEditDropdown && !calendarEditDropdown.hidden) {
     calendarEditDropdown.hidden = true;
   }
+  if (calendarDetailDropdown && !calendarDetailDropdown.hidden) {
+    calendarDetailDropdown.hidden = true;
+  }
+});
+
+// Panel de detalle: listeners
+document.getElementById('closeCalendarDetailPanel')?.addEventListener('click', closeCalendarDetailPanel);
+
+document.getElementById('calendarDetailMenuBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (calendarDetailDropdown) calendarDetailDropdown.hidden = !calendarDetailDropdown.hidden;
+});
+
+document.getElementById('editRecipeFromDetailPanelBtn')?.addEventListener('click', () => {
+  const entry = _viewingCalendarEntry;
+  if (!entry) return;
+  if (calendarDetailDropdown) calendarDetailDropdown.hidden = true;
+  // En móvil: abre el panel de edición de receta dentro de Planificación
+  // El panel de detalle queda abierto en fondo; en desktop no existe este panel
+  if (window.innerWidth < 768) {
+    openCalendarRecipeEdit(entry.recipeId);
+  } else {
+    calendarDetailPanel?.classList.remove('is-open');
+    _viewingCalendarEntry = null;
+    startEditRecipe(entry.recipeId);
+    openRecipePanel();
+  }
+});
+
+document.getElementById('editFromDetailPanelBtn')?.addEventListener('click', () => {
+  const entry = _viewingCalendarEntry;
+  if (!entry) return;
+  // Mantener el panel de detalle abierto — el de edición apila encima
+  if (calendarDetailDropdown) calendarDetailDropdown.hidden = true;
+  openCalendarModalPreset(entry.date, entry.meal, 'edit', entry.recipeId, entry.repeat ?? 'never', entry);
 });
 
 function applyDeleteCalendarEntry() {
@@ -1612,6 +1834,7 @@ if (deleteCalendarEntryBtn) {
     } else {
       if (!window.confirm('¿Seguro que quieres eliminar este cocinado?')) return;
       applyDeleteCalendarEntry();
+      closeCalendarDetailPanel();
       closeCalendarPanel();
     }
   });
@@ -1621,6 +1844,7 @@ if (confirmDeleteOccurrenceBtn) {
   confirmDeleteOccurrenceBtn.addEventListener('click', () => {
     applyDeleteCalendarOccurrence();
     if (deleteCalendarConfirmModal) deleteCalendarConfirmModal.classList.add('hidden');
+    closeCalendarDetailPanel();
     closeCalendarPanel();
   });
 }
@@ -1629,6 +1853,7 @@ if (confirmDeleteAllBtn) {
   confirmDeleteAllBtn.addEventListener('click', () => {
     applyDeleteCalendarEntry();
     if (deleteCalendarConfirmModal) deleteCalendarConfirmModal.classList.add('hidden');
+    closeCalendarDetailPanel();
     closeCalendarPanel();
   });
 }
@@ -2587,11 +2812,20 @@ weekDates.forEach((date) => {
       const recipe = recipes.find((r) => r.id === entry.recipeId);
       if (!recipe) return;
 
+      const cookedKey = `${date}-${entry.recipeId}-${entry.meal}`;
+
       const recipeLi = document.createElement('li');
       recipeLi.classList.add('calendar-recipe-row');
       if (!recipe.ingredients || recipe.ingredients.length === 0) {
         recipeLi.classList.add('is-no-ingredients');
       }
+      if (calendarCooked[cookedKey]) {
+        recipeLi.classList.add('is-cooked');
+      }
+
+      // Contenido de texto (ingesta + nombre receta)
+      const entryBody = document.createElement('div');
+      entryBody.className = 'calendar-entry-body';
 
       const mealEl = document.createElement('div');
       mealEl.className = 'calendar-meal';
@@ -2615,9 +2849,35 @@ weekDates.forEach((date) => {
       recipeNameEl.className = 'calendar-recipe-name';
       recipeNameEl.textContent = recipe.name;
 
-      recipeLi.appendChild(mealEl);
-      recipeLi.appendChild(recipeNameEl);
-      recipeLi.addEventListener('click', () => openCalendarModalPreset(date, entry.meal, 'edit', entry.recipeId, entry.repeat ?? 'never', entry));
+      entryBody.appendChild(mealEl);
+      entryBody.appendChild(recipeNameEl);
+
+      // Checkbox "cocinado"
+      const cbLabel = document.createElement('label');
+      cbLabel.className = 'cb calendar-cb';
+      const cbInput = document.createElement('input');
+      cbInput.type = 'checkbox';
+      cbInput.className = 'cb-input';
+      cbInput.checked = !!calendarCooked[cookedKey];
+      const cbBox = document.createElement('span');
+      cbBox.className = 'cb-box';
+      cbLabel.appendChild(cbInput);
+      cbLabel.appendChild(cbBox);
+
+      cbLabel.addEventListener('click', (e) => e.stopPropagation());
+      cbInput.addEventListener('change', () => {
+        if (cbInput.checked) {
+          calendarCooked[cookedKey] = true;
+        } else {
+          delete calendarCooked[cookedKey];
+        }
+        saveCalendarCooked();
+        recipeLi.classList.toggle('is-cooked', cbInput.checked);
+      });
+
+      recipeLi.appendChild(cbLabel);
+      recipeLi.appendChild(entryBody);
+      recipeLi.addEventListener('click', () => openCalendarDetailPanel(entry));
       ul.appendChild(recipeLi);
     });
 
@@ -4559,6 +4819,7 @@ function startFirebaseListeners() {
     { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = v; }, render: () => renderIngredients() },
     { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = Array.isArray(v) ? v.map(r => ({ ...r, ingredients: r.ingredients || [] })) : []; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
     { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = v; }, render: () => renderCalendarEntries() },
+    { key: 'calendarCooked',   ref: 'compra/calendarCooked',   set: v => { calendarCooked   = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }, render: () => renderCalendarEntries() },
     { key: 'lista2Items',      ref: 'compra/lista2Items',      set: v => { lista2Items      = Array.isArray(v) ? v.map(item => ({ ...item, ingredientNames: item.ingredientNames || [] })) : []; }, render: () => renderLista2() },
     { key: 'lista2Checked',    ref: 'compra/lista2Checked',    set: v => { lista2Checked    = v; }, render: () => renderLista2() },
     { key: 'lista2ShopQty',    ref: 'compra/lista2ShopQty',    set: v => { lista2ShopQty    = v; }, render: () => renderLista2() },
