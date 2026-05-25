@@ -124,61 +124,8 @@ let _recipeSearch = '';
 let _recipeTooltip = null;
 
 
-// 🔧 LIMPIEZA DE ENTRADAS CORRUPTAS
-// 🔧 Limpieza defensiva de entradas antiguas o corruptas
-// Elimina cualquier entrada sin fecha ISO válida (previene "Invalid date")
-
-calendarEntries.forEach((e) => {
-  if (!Array.isArray(e.excludedDates)) return;
-  e.excludedDates = e.excludedDates.filter(isValidISODateString);
-});
-
 function isValidISODateString(s) {
   return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-
-calendarEntries = calendarEntries.filter((e) => {
-  const repeat = e.repeat || 'never';
-const isPattern = repeat === 'daily' || repeat === 'weekly';
-
-const keyDate = isPattern
-  ? (e.startDate || e.date)
-  : (e.date || e.startDate);
-
-return isValidISODateString(keyDate);
-});
-
-// Elimina entradas anteriores a la semana actual
-const _currentWeekStart = toISODateString(startOfWeekMonday(new Date()));
-calendarEntries = calendarEntries.filter((e) => {
-  const repeat = e.repeat || 'never';
-  if (repeat === 'never') {
-    return (e.date || '') >= _currentWeekStart;
-  }
-  // Recurrentes: eliminar solo si tienen `until` ya pasado
-  if (e.until && e.until < _currentWeekStart) return false;
-  return true;
-});
-// Limpiar excludedDates pasadas en entradas recurrentes
-calendarEntries.forEach((e) => {
-  if (Array.isArray(e.excludedDates) && e.excludedDates.length) {
-    e.excludedDates = e.excludedDates.filter(d => d >= _currentWeekStart);
-  }
-});
-
-if (calendarEntries.length > 0) saveCalendarEntries();
-
-// Limpiar calendarCooked de fechas pasadas (solo localStorage; Firebase se carga después)
-{
-  const cookedFiltered = {};
-  Object.keys(calendarCooked).forEach(k => {
-    const datePart = k.substring(0, 10);
-    if (!isValidISODateString(datePart) || datePart >= _currentWeekStart) {
-      cookedFiltered[k] = calendarCooked[k];
-    }
-  });
-  calendarCooked = cookedFiltered;
-  localStorage.setItem('calendarCooked', JSON.stringify(calendarCooked));
 }
 
 // -----------------------
@@ -4845,6 +4792,42 @@ function startFirebaseListeners() {
           }
         }
       });
+
+      // Limpieza de calendarEntries y calendarCooked sobre datos reales de Firebase
+      const _weekStart = toISODateString(startOfWeekMonday(new Date()));
+      calendarEntries.forEach(e => {
+        if (!Array.isArray(e.excludedDates)) return;
+        e.excludedDates = e.excludedDates.filter(isValidISODateString);
+      });
+      calendarEntries = calendarEntries.filter(e => {
+        const repeat = e.repeat || 'never';
+        const isPattern = repeat === 'daily' || repeat === 'weekly';
+        const keyDate = isPattern ? (e.startDate || e.date) : (e.date || e.startDate);
+        return isValidISODateString(keyDate);
+      });
+      calendarEntries = calendarEntries.filter(e => {
+        const repeat = e.repeat || 'never';
+        if (repeat === 'never') return (e.date || '') >= _weekStart;
+        if (e.until && e.until < _weekStart) return false;
+        return true;
+      });
+      calendarEntries.forEach(e => {
+        if (Array.isArray(e.excludedDates) && e.excludedDates.length) {
+          e.excludedDates = e.excludedDates.filter(d => d >= _weekStart);
+        }
+      });
+      if (calendarEntries.length > 0) saveCalendarEntries();
+      const _cookedFiltered = {};
+      Object.keys(calendarCooked).forEach(k => {
+        const datePart = k.substring(0, 10);
+        if (!isValidISODateString(datePart) || datePart >= _weekStart) {
+          _cookedFiltered[k] = calendarCooked[k];
+        }
+      });
+      if (Object.keys(_cookedFiltered).length !== Object.keys(calendarCooked).length) {
+        calendarCooked = _cookedFiltered;
+        saveCalendarCooked();
+      }
 
       // Full re-render after initial load
       try { renderIngredients(); } catch(e) {}
