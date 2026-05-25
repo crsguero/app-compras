@@ -34,7 +34,6 @@ if (ingredients.some(i => !i.shoppingType)) {
 }
 let recipes = safeLoad('recipes', []);
 let editingRecipeId = null;
-const _localCalendarRaw = localStorage.getItem('calendarEntries');
 let calendarEntries = safeLoad('calendarEntries', []);
 let purchasedItems = safeLoad('purchasedItems', {});
 let lastShoppingList = safeLoad('lastShoppingList', null);
@@ -166,7 +165,7 @@ calendarEntries.forEach((e) => {
   }
 });
 
-if (_localCalendarRaw !== null) saveCalendarEntries();
+if (calendarEntries.length > 0) saveCalendarEntries();
 
 // -----------------------
 // GUARDAR EN LOCALSTORAGE
