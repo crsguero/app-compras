@@ -404,7 +404,7 @@ const SETTINGS_LISTS = {
     noun: 'ubicación',
     plural: 'ubicaciones',
     placeholder: 'Nombre de la ubicación...',
-    usageCount: () => 0,
+    usageCount: (value) => consumables.filter((c) => (c.location || '') === value).length,
     usageNoun: 'consumible',
     onChange: () => {
       refreshConsumableSelects();
@@ -1378,6 +1378,7 @@ const consumableForm = document.getElementById('consumableForm');
 const consumableList = document.getElementById('consumableList');
 const consumableNameInput = document.getElementById('consumableNameInput');
 const consumableMinQuantityInput = document.getElementById('consumableMinQuantityInput');
+const consumableLocationSelect = document.getElementById('consumableLocationSelect');
 const consumableStoreSelect = document.getElementById('consumableStoreSelect');
 const consumableProductInput = document.getElementById('consumableProductInput');
 const consumableModalTitle = document.getElementById('consumableModalTitle');
@@ -1391,6 +1392,7 @@ const newConsumableModal = document.getElementById('newConsumableModal');
 const newConsumableForm = document.getElementById('newConsumableForm');
 const newConsumableNameInput = document.getElementById('newConsumableNameInput');
 const newConsumableMinQuantityInput = document.getElementById('newConsumableMinQuantityInput');
+const newConsumableLocationSelect = document.getElementById('newConsumableLocationSelect');
 const newConsumableStoreSelect = document.getElementById('newConsumableStoreSelect');
 const newConsumableProductInput = document.getElementById('newConsumableProductInput');
 
@@ -1407,6 +1409,7 @@ function closeConsumablePanel() {
 if (openConsumableModalBtn) {
   openConsumableModalBtn.addEventListener('click', () => {
     if (newConsumableForm) newConsumableForm.reset();
+    populateSettingsSelect(newConsumableLocationSelect, 'consumable-location', '', 'Selecciona una ubicación...');
     populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', '', 'Selecciona un comercio...');
     openModal(newConsumableModal);
   });
@@ -1433,6 +1436,7 @@ if (newConsumableForm) {
       id: Date.now(),
       name,
       minQuantity: newConsumableMinQuantityInput?.value.trim() || null,
+      location: newConsumableLocationSelect?.value || null,
       store: store || null,
       product: newConsumableProductInput?.value.trim() || null,
     });
@@ -1480,6 +1484,7 @@ function renderConsumables() {
 
 function applyConsumableSort(arr, col, dir) {
   const storeOrder = settingsOrder('consumable-store');
+  const locationOrder = settingsOrder('consumable-location');
 
   return [...arr].sort((a, b) => {
     let cmp = 0;
@@ -1488,6 +1493,10 @@ function applyConsumableSort(arr, col, dir) {
     } else if (col === 'store') {
       const ai = storeOrder.indexOf(a.store ?? '');
       const bi = storeOrder.indexOf(b.store ?? '');
+      cmp = (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    } else if (col === 'location') {
+      const ai = locationOrder.indexOf(a.location ?? '');
+      const bi = locationOrder.indexOf(b.location ?? '');
       cmp = (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     }
     return dir === 'asc' ? cmp : -cmp;
@@ -1503,6 +1512,7 @@ function renderConsumablesTable(raw) {
   const COLS = [
     { key: 'name',        label: 'Nombre',          sortable: true  },
     { key: 'minQuantity', label: 'Cantidad mínima', sortable: false },
+    { key: 'location',    label: 'Ubicación',       sortable: true  },
     { key: 'store',       label: 'Comercio',        sortable: true  },
     { key: 'product',     label: 'Producto',        sortable: false },
   ];
@@ -1546,6 +1556,10 @@ function renderConsumablesTable(raw) {
     const minQtyTd = document.createElement('td');
     minQtyTd.textContent = consumable.minQuantity || '';
     tr.appendChild(minQtyTd);
+
+    const locTd = document.createElement('td');
+    locTd.textContent = settingsLabel('consumable-location', consumable.location);
+    tr.appendChild(locTd);
 
     const storeTd = document.createElement('td');
     storeTd.textContent = settingsLabel('consumable-store', consumable.store);
@@ -1614,6 +1628,7 @@ function startEditConsumable(id) {
 
   consumableNameInput.value = consumable.name;
   if (consumableMinQuantityInput) consumableMinQuantityInput.value = consumable.minQuantity || '';
+  populateSettingsSelect(consumableLocationSelect, 'consumable-location', consumable.location || '', 'Selecciona una ubicación...');
   populateSettingsSelect(consumableStoreSelect, 'consumable-store', consumable.store || '', 'Selecciona un comercio...');
   if (consumableProductInput) consumableProductInput.value = consumable.product || '';
 
@@ -1638,6 +1653,7 @@ if (consumableForm) {
 
       consumable.name = name;
       consumable.minQuantity = consumableMinQuantityInput?.value.trim() || null;
+      consumable.location = consumableLocationSelect?.value || null;
       consumable.store = store || null;
       consumable.product = consumableProductInput?.value.trim() || null;
     } else {
@@ -1645,6 +1661,7 @@ if (consumableForm) {
         id: Date.now(),
         name,
         minQuantity: consumableMinQuantityInput?.value.trim() || null,
+        location: consumableLocationSelect?.value || null,
         store: store || null,
         product: consumableProductInput?.value.trim() || null,
       });
@@ -1676,6 +1693,7 @@ function autoSaveConsumable() {
 
   consumable.name = name;
   consumable.minQuantity = consumableMinQuantityInput?.value.trim() || null;
+  consumable.location = consumableLocationSelect?.value || null;
   consumable.store = store || null;
   consumable.product = consumableProductInput?.value.trim() || null;
 
@@ -1688,7 +1706,7 @@ function autoSaveConsumable() {
 }
 
 [
-  consumableNameInput, consumableMinQuantityInput,
+  consumableNameInput, consumableMinQuantityInput, consumableLocationSelect,
   consumableStoreSelect, consumableProductInput,
 ].forEach((el) => {
   if (el) el.addEventListener('change', autoSaveConsumable);
@@ -1775,7 +1793,9 @@ function refreshIngredientSelects() {
 }
 
 function refreshConsumableSelects() {
+  populateSettingsSelect(consumableLocationSelect, 'consumable-location', undefined, 'Selecciona una ubicación...');
   populateSettingsSelect(consumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(newConsumableLocationSelect, 'consumable-location', undefined, 'Selecciona una ubicación...');
   populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
 }
 
@@ -5676,7 +5696,7 @@ function startFirebaseListeners() {
     { key: 'consumables',      ref: 'compra/consumables',      set: v => { consumables      = Array.isArray(v) ? v : []; }, render: () => renderConsumables() },
     { key: 'settingsIngredientLocations', ref: 'compra/settingsIngredientLocations', set: v => { settingsIngredientLocations = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
     { key: 'settingsIngredientStores',    ref: 'compra/settingsIngredientStores',    set: v => { settingsIngredientStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
-    { key: 'settingsConsumableLocations', ref: 'compra/settingsConsumableLocations', set: v => { settingsConsumableLocations = Array.isArray(v) ? v : []; }, render: () => renderSettings() },
+    { key: 'settingsConsumableLocations', ref: 'compra/settingsConsumableLocations', set: v => { settingsConsumableLocations = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshConsumableSelects(); renderConsumables(); } },
     { key: 'settingsConsumableStores',    ref: 'compra/settingsConsumableStores',    set: v => { settingsConsumableStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshConsumableSelects(); renderConsumables(); } },
     { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = Array.isArray(v) ? v.map(r => ({ ...r, ingredients: r.ingredients || [] })) : []; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
     { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = Array.isArray(v) ? v : []; }, render: () => renderCalendarEntries() },
