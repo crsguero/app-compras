@@ -32,6 +32,18 @@ if (ingredients.some(i => !i.shoppingType)) {
   ingredients = ingredients.map(i => i.shoppingType ? i : { ...i, shoppingType: 'semanal' });
   localStorage.setItem('ingredients', JSON.stringify(ingredients));
 }
+let consumables = safeLoad('consumables', []);
+// Ajustes de ubicaciones/comercios, independientes por pestaña.
+// null = todavía sin inicializar (se siembra en ensureSettingsSeed).
+let settingsIngredientLocations = safeLoad('settingsIngredientLocations', null);
+let settingsIngredientStores    = safeLoad('settingsIngredientStores', null);
+let settingsConsumableLocations = safeLoad('settingsConsumableLocations', null);
+let settingsConsumableStores    = safeLoad('settingsConsumableStores', null);
+
+// Claves de la versión anterior, cuando la lista era única y se editaba desde
+// Consumibles. Se conservan para migrarlas a las listas de Consumibles.
+const _legacySettingsLocations = safeLoad('settingsLocations', null);
+const _legacySettingsStores    = safeLoad('settingsStores', null);
 let recipes = safeLoad('recipes', []);
 let editingRecipeId = null;
 let calendarEntries = safeLoad('calendarEntries', []);
@@ -43,6 +55,7 @@ let lista2Checked = safeLoad('lista2Checked', {});
 let lista2ShopQty = safeLoad('lista2ShopQty', {});
 let lista2ShopMode = false;
 let editingIngredientId = null;
+let editingConsumableId = null;
 
 // -----------------------
 // CONSTANTES DE ETIQUETAS
@@ -120,6 +133,8 @@ let _ingredientSort = { col: 'name', dir: 'asc' };
 let _recipeSort = { dir: 'asc' };
 let _ingredientFilters = { stores: new Set(), locations: new Set(), pantry: null, shoppingType: null };
 let _ingredientSearch = '';
+let _consumableSort = { col: 'name', dir: 'asc' };
+let _consumableSearch = '';
 let _recipeSearch = '';
 let _recipeTooltip = null;
 
@@ -131,49 +146,73 @@ function isValidISODateString(s) {
 // -----------------------
 // GUARDAR EN LOCALSTORAGE
 // -----------------------
+
+// Si el guardado en Firebase falla (p.ej. sesión caducada o regla de
+// seguridad), avisar en vez de fallar en silencio — el cambio quedaría
+// solo en este dispositivo y nunca llegaría a los demás.
+function saveToFirebase(path, value) {
+  db.ref(path).set(value).catch(err => {
+    console.error(`Error al guardar en Firebase (${path}):`, err);
+    alert(`No se ha podido sincronizar el cambio con los otros dispositivos.\n\nRuta: ${path}\nError: ${err.message}`);
+  });
+}
+
 function saveIngredients() {
   localStorage.setItem('ingredients', JSON.stringify(ingredients));
-  db.ref('compra/ingredients').set(ingredients);
+  saveToFirebase('compra/ingredients', ingredients);
+}
+
+function saveConsumables() {
+  localStorage.setItem('consumables', JSON.stringify(consumables));
+  saveToFirebase('compra/consumables', consumables);
+}
+
+function saveSettingsList(listKey) {
+  const cfg = SETTINGS_LISTS[listKey];
+  if (!cfg) return;
+  const items = cfg.getItems() || [];
+  localStorage.setItem(cfg.storageKey, JSON.stringify(items));
+  saveToFirebase(cfg.fbPath, items);
 }
 
 function saveRecipes() {
   localStorage.setItem('recipes', JSON.stringify(recipes));
-  db.ref('compra/recipes').set(recipes);
+  saveToFirebase('compra/recipes', recipes);
 }
 
 function saveCalendarEntries() {
   localStorage.setItem('calendarEntries', JSON.stringify(calendarEntries));
-  db.ref('compra/calendarEntries').set(calendarEntries);
+  saveToFirebase('compra/calendarEntries', calendarEntries);
 }
 
 function saveCalendarCooked() {
   localStorage.setItem('calendarCooked', JSON.stringify(calendarCooked));
-  db.ref('compra/calendarCooked').set(calendarCooked);
+  saveToFirebase('compra/calendarCooked', calendarCooked);
 }
 
 function saveLista2Items() {
   localStorage.setItem('lista2Items', JSON.stringify(lista2Items));
-  db.ref('compra/lista2Items').set(lista2Items);
+  saveToFirebase('compra/lista2Items', lista2Items);
 }
 
 function saveLista2Checked() {
   localStorage.setItem('lista2Checked', JSON.stringify(lista2Checked));
-  db.ref('compra/lista2Checked').set(lista2Checked);
+  saveToFirebase('compra/lista2Checked', lista2Checked);
 }
 
 function saveLista2ShopQty() {
   localStorage.setItem('lista2ShopQty', JSON.stringify(lista2ShopQty));
-  db.ref('compra/lista2ShopQty').set(lista2ShopQty);
+  saveToFirebase('compra/lista2ShopQty', lista2ShopQty);
 }
 
 function savePurchasedItems() {
   localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
-  db.ref('compra/purchasedItems').set(purchasedItems);
+  saveToFirebase('compra/purchasedItems', purchasedItems);
 }
 
 function saveLastShoppingList() {
   localStorage.setItem('lastShoppingList', JSON.stringify(lastShoppingList));
-  db.ref('compra/lastShoppingList').set(lastShoppingList);
+  saveToFirebase('compra/lastShoppingList', lastShoppingList);
 }
 
 
@@ -300,6 +339,202 @@ function getWeekdayName(dateString) {
 
 
 // -----------------------
+// AJUSTES: UBICACIONES Y COMERCIOS
+// -----------------------
+// Cada pestaña tiene sus propias listas: las de Ingredientes solo afectan a
+// Ingredientes y las de Consumibles solo a Consumibles.
+//
+// Los registros guardados (ingredient.store, ingredient.location,
+// consumable.store) siguen almacenando su clave interna (`value`), nunca el
+// nombre visible. Editar, reordenar o borrar una entrada de estas listas no
+// modifica ningún registro: si una clave deja de estar en la lista, se sigue
+// mostrando con su etiqueta original y se sigue ofreciendo en el desplegable
+// del registro que la usa.
+
+// Fila en edición: { listKey, id } o null.
+let _settingsEditing = null;
+
+const SETTINGS_LISTS = {
+  'ingredient-location': {
+    storageKey: 'settingsIngredientLocations',
+    fbPath: 'compra/settingsIngredientLocations',
+    getItems: () => settingsIngredientLocations,
+    setItems: (v) => { settingsIngredientLocations = v; },
+    listElId: 'ingredientSettingsLocationsList',
+    fallbackLabels: LOCATION_LABELS,
+    legacy: () => null,
+    noun: 'ubicación',
+    plural: 'ubicaciones',
+    placeholder: 'Nombre de la ubicación...',
+    usageCount: (value) => ingredients.filter((i) => (i.location || '') === value).length,
+    usageNoun: 'ingrediente',
+    onChange: () => {
+      refreshIngredientSelects();
+      renderIngredients();
+      renderFilterPanel();
+    },
+  },
+  'ingredient-store': {
+    storageKey: 'settingsIngredientStores',
+    fbPath: 'compra/settingsIngredientStores',
+    getItems: () => settingsIngredientStores,
+    setItems: (v) => { settingsIngredientStores = v; },
+    listElId: 'ingredientSettingsStoresList',
+    fallbackLabels: STORE_LABELS,
+    legacy: () => null,
+    noun: 'comercio',
+    plural: 'comercios',
+    placeholder: 'Nombre del comercio...',
+    usageCount: (value) => ingredients.filter((i) => (i.store || '') === value).length,
+    usageNoun: 'ingrediente',
+    onChange: () => {
+      refreshIngredientSelects();
+      renderIngredients();
+      renderFilterPanel();
+    },
+  },
+  'consumable-location': {
+    storageKey: 'settingsConsumableLocations',
+    fbPath: 'compra/settingsConsumableLocations',
+    getItems: () => settingsConsumableLocations,
+    setItems: (v) => { settingsConsumableLocations = v; },
+    listElId: 'consumableSettingsLocationsList',
+    fallbackLabels: LOCATION_LABELS,
+    legacy: () => _legacySettingsLocations,
+    noun: 'ubicación',
+    plural: 'ubicaciones',
+    placeholder: 'Nombre de la ubicación...',
+    usageCount: () => 0,
+    usageNoun: 'consumible',
+    onChange: () => {
+      refreshConsumableSelects();
+      renderConsumables();
+    },
+  },
+  'consumable-store': {
+    storageKey: 'settingsConsumableStores',
+    fbPath: 'compra/settingsConsumableStores',
+    getItems: () => settingsConsumableStores,
+    setItems: (v) => { settingsConsumableStores = v; },
+    listElId: 'consumableSettingsStoresList',
+    fallbackLabels: STORE_LABELS,
+    legacy: () => _legacySettingsStores,
+    noun: 'comercio',
+    plural: 'comercios',
+    placeholder: 'Nombre del comercio...',
+    usageCount: (value) => consumables.filter((c) => (c.store || '') === value).length,
+    usageNoun: 'consumible',
+    onChange: () => {
+      refreshConsumableSelects();
+      renderConsumables();
+    },
+  },
+};
+
+function slugifySettingValue(name) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function getSettingsItems(listKey) {
+  const items = SETTINGS_LISTS[listKey]?.getItems();
+  return Array.isArray(items) ? items : [];
+}
+
+// Etiqueta visible de una clave guardada. Si la clave ya no está en la lista
+// configurada, se cae a la etiqueta original de la app y, en último término, a
+// la propia clave: así ningún registro se queda sin texto.
+function settingsLabel(listKey, value) {
+  if (!value) return '';
+  const item = getSettingsItems(listKey).find((it) => it.value === value);
+  if (item) return item.name;
+  return SETTINGS_LISTS[listKey]?.fallbackLabels[value] || value;
+}
+
+// Orden configurado, usado para ordenar las columnas de las tablas.
+function settingsOrder(listKey) {
+  const order = getSettingsItems(listKey)
+    .map((it) => it.value)
+    .filter(Boolean);
+  return order.length ? order : Object.keys(SETTINGS_LISTS[listKey].fallbackLabels);
+}
+
+// Opciones para filtros: las configuradas más las claves que aún estén en uso
+// en los datos aunque ya no figuren en la lista.
+function settingsOptions(listKey, usedValues = []) {
+  const opts = [];
+  const seen = new Set();
+  getSettingsItems(listKey).forEach((it) => {
+    if (!it.value || seen.has(it.value)) return;
+    seen.add(it.value);
+    opts.push({ value: it.value, label: it.name });
+  });
+  usedValues.forEach((v) => {
+    if (!v || seen.has(v)) return;
+    seen.add(v);
+    opts.push({ value: v, label: settingsLabel(listKey, v) });
+  });
+  return opts;
+}
+
+// Rellena un <select> con la lista configurada, conservando el valor actual
+// aunque ya no esté en la lista (se añade como opción extra).
+function populateSettingsSelect(selectEl, listKey, currentValue, placeholder) {
+  if (!selectEl) return;
+  const value = currentValue !== undefined && currentValue !== null
+    ? currentValue
+    : selectEl.value || '';
+
+  selectEl.innerHTML = '';
+
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = placeholder;
+  selectEl.appendChild(ph);
+
+  settingsOptions(listKey, value ? [value] : []).forEach(({ value: v, label }) => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = label;
+    selectEl.appendChild(opt);
+  });
+
+  selectEl.value = value || '';
+}
+
+// Semilla inicial: primero las listas de la versión anterior (que solo existían
+// para Consumibles) y, si no las hay, las listas fijas de la app. Sembrar con
+// las mismas claves que ya usan los registros garantiza que todo siga
+// resolviendo igual que antes.
+// Solo escribe en localStorage: si Firebase ya tiene datos, mandan los de Firebase.
+function ensureSettingsSeed() {
+  Object.entries(SETTINGS_LISTS).forEach(([, cfg]) => {
+    if (Array.isArray(cfg.getItems())) return;
+
+    const legacy = cfg.legacy();
+    const seeded = Array.isArray(legacy) && legacy.length
+      ? legacy.map((it, i) => ({
+          id: it.id ?? Date.now() + i,
+          value: it.value || slugifySettingValue(it.name || '') || String(Date.now() + i),
+          name: it.name || '',
+        }))
+      : Object.entries(cfg.fallbackLabels).map(([value, name], i) => ({
+          id: Date.now() + i,
+          value,
+          name,
+        }));
+
+    cfg.setItems(seeded);
+    localStorage.setItem(cfg.storageKey, JSON.stringify(seeded));
+  });
+}
+
+ensureSettingsSeed();
+
+// -----------------------
 // INGREDIENTES
 // -----------------------
 const ingredientForm = document.getElementById('ingredientForm');
@@ -355,6 +590,8 @@ function closeIngredientPanel() {
 if (openIngredientModalBtn) {
   openIngredientModalBtn.addEventListener('click', () => {
     if (newIngredientForm) newIngredientForm.reset();
+    populateSettingsSelect(newLocationSelect, 'ingredient-location', '', 'Selecciona una ubicación...');
+    populateSettingsSelect(newStoreSelect, 'ingredient-store', '', 'Selecciona un comercio...');
     if (newPantryToggle) newPantryToggle.checked = false;
     if (newMinQuantityWrapper) newMinQuantityWrapper.classList.add('hidden');
     if (newMinQuantityInput) newMinQuantityInput.required = false;
@@ -516,7 +753,7 @@ function renderFilterPanel() {
   storeTitle.className = 'filter-section-title';
   storeTitle.textContent = 'Comercio';
   storeSection.appendChild(storeTitle);
-  Object.entries(STORE_LABELS).forEach(([key, label]) => {
+  settingsOptions('ingredient-store', ingredients.map((i) => i.store)).forEach(({ value: key, label }) => {
     const opt = document.createElement('label');
     opt.className = 'filter-option';
     const cb = document.createElement('input');
@@ -541,7 +778,7 @@ function renderFilterPanel() {
   locTitle.className = 'filter-section-title';
   locTitle.textContent = 'Ubicación';
   locSection.appendChild(locTitle);
-  Object.entries(LOCATION_LABELS).forEach(([key, label]) => {
+  settingsOptions('ingredient-location', ingredients.map((i) => i.location)).forEach(({ value: key, label }) => {
     const opt = document.createElement('label');
     opt.className = 'filter-option';
     const cb = document.createElement('input');
@@ -635,8 +872,8 @@ function renderIngredients() {
 }
 
 function applyIngredientSort(arr, col, dir) {
-  const storeOrder = Object.keys(STORE_LABELS);
-  const locationOrder = Object.keys(LOCATION_LABELS);
+  const storeOrder = settingsOrder('ingredient-store');
+  const locationOrder = settingsOrder('ingredient-location');
 
   return [...arr].sort((a, b) => {
     let cmp = 0;
@@ -729,7 +966,7 @@ function renderIngredientsTable(raw) {
 
     // Ubicación
     const locTd = document.createElement('td');
-    locTd.textContent = LOCATION_LABELS[ingredient.location] || ingredient.location || '';
+    locTd.textContent = settingsLabel('ingredient-location', ingredient.location);
     tr.appendChild(locTd);
 
     // Despensa
@@ -744,7 +981,7 @@ function renderIngredientsTable(raw) {
 
     // Comercio
     const storeTd = document.createElement('td');
-    storeTd.textContent = STORE_LABELS[ingredient.store] || ingredient.store || '';
+    storeTd.textContent = settingsLabel('ingredient-store', ingredient.store);
     tr.appendChild(storeTd);
 
     tr.style.cursor = 'pointer';
@@ -812,8 +1049,10 @@ function startEditIngredient(id) {
   // Rellenar formulario
   nameInput.value = ingredient.name;
   unitInput.value = ingredient.unit;
-  storeSelect.value = ingredient.store || '';
-  locationSelect.value = ingredient.location || '';
+  // Se repueblan con el valor guardado para que, si esa ubicación/comercio ya
+  // no está en los ajustes, siga apareciendo y no se pierda al editar.
+  populateSettingsSelect(storeSelect, 'ingredient-store', ingredient.store || '', 'Selecciona un comercio...');
+  populateSettingsSelect(locationSelect, 'ingredient-location', ingredient.location || '', 'Selecciona una ubicación...');
   if (shoppingTypeSelect) shoppingTypeSelect.value = ingredient.shoppingType || '';
   if (productInput) productInput.value = ingredient.product || '';
   if (productUnitSelect) productUnitSelect.value = ingredient.productUnit || '';
@@ -1131,6 +1370,650 @@ if (recipeSearchBtn && recipeSearchWrapper && recipeSearchInput) {
 if (recipeSearchCloseBtn) {
   recipeSearchCloseBtn.addEventListener('click', closeRecipeSearch);
 }
+
+// -----------------------
+// CONSUMIBLES
+// -----------------------
+const consumableForm = document.getElementById('consumableForm');
+const consumableList = document.getElementById('consumableList');
+const consumableNameInput = document.getElementById('consumableNameInput');
+const consumableMinQuantityInput = document.getElementById('consumableMinQuantityInput');
+const consumableStoreSelect = document.getElementById('consumableStoreSelect');
+const consumableProductInput = document.getElementById('consumableProductInput');
+const consumableModalTitle = document.getElementById('consumableModalTitle');
+
+const openConsumableModalBtn = document.getElementById('openConsumableModal');
+const consumableEditPanel = document.getElementById('consumableEditPanel');
+const closeConsumableModalBtn = document.getElementById('closeConsumableModal');
+
+// Modal: nuevo consumible
+const newConsumableModal = document.getElementById('newConsumableModal');
+const newConsumableForm = document.getElementById('newConsumableForm');
+const newConsumableNameInput = document.getElementById('newConsumableNameInput');
+const newConsumableMinQuantityInput = document.getElementById('newConsumableMinQuantityInput');
+const newConsumableStoreSelect = document.getElementById('newConsumableStoreSelect');
+const newConsumableProductInput = document.getElementById('newConsumableProductInput');
+
+function openConsumablePanel() {
+  consumableEditPanel?.classList.add('is-open');
+}
+
+function closeConsumablePanel() {
+  consumableEditPanel?.classList.remove('is-open');
+  document.querySelectorAll('#consumableList .ingredient-table tr.is-selected')
+    .forEach((r) => r.classList.remove('is-selected'));
+}
+
+if (openConsumableModalBtn) {
+  openConsumableModalBtn.addEventListener('click', () => {
+    if (newConsumableForm) newConsumableForm.reset();
+    populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', '', 'Selecciona un comercio...');
+    openModal(newConsumableModal);
+  });
+}
+
+document.getElementById('closeNewConsumableModal')?.addEventListener('click', () => {
+  closeModal(newConsumableModal);
+});
+
+newConsumableModal?.addEventListener('click', (e) => {
+  if (e.target === newConsumableModal) closeModal(newConsumableModal);
+});
+
+if (newConsumableForm) {
+  newConsumableForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name = newConsumableNameInput.value.trim();
+    const store = newConsumableStoreSelect.value;
+
+    if (!name || !store) return;
+
+    consumables.push({
+      id: Date.now(),
+      name,
+      minQuantity: newConsumableMinQuantityInput?.value.trim() || null,
+      store: store || null,
+      product: newConsumableProductInput?.value.trim() || null,
+    });
+
+    saveConsumables();
+    renderConsumables();
+
+    newConsumableForm.reset();
+    closeModal(newConsumableModal);
+  });
+}
+
+if (closeConsumableModalBtn) {
+  closeConsumableModalBtn.addEventListener('click', () => {
+    closeConsumablePanel();
+  });
+}
+
+document.getElementById('closeConsumableSheetBtn')?.addEventListener('click', () => {
+  closeConsumablePanel();
+});
+
+function applyConsumableFilters(arr) {
+  if (!_consumableSearch) return [...arr];
+  const q = _consumableSearch.toLowerCase();
+  return arr.filter((c) => c.name.toLowerCase().includes(q));
+}
+
+function renderConsumables() {
+  if (!consumableList) return;
+
+  consumableList.innerHTML = '';
+
+  const filtered = applyConsumableFilters(consumables);
+
+  if (window.innerWidth >= 768) {
+    renderConsumablesTable(filtered);
+  } else {
+    const alphabetical = [...filtered].sort((a, b) =>
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+    renderConsumablesList(alphabetical);
+  }
+}
+
+function applyConsumableSort(arr, col, dir) {
+  const storeOrder = settingsOrder('consumable-store');
+
+  return [...arr].sort((a, b) => {
+    let cmp = 0;
+    if (col === 'name') {
+      cmp = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+    } else if (col === 'store') {
+      const ai = storeOrder.indexOf(a.store ?? '');
+      const bi = storeOrder.indexOf(b.store ?? '');
+      cmp = (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    }
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
+
+function renderConsumablesTable(raw) {
+  const sorted = applyConsumableSort(raw, _consumableSort.col, _consumableSort.dir);
+
+  const table = document.createElement('table');
+  table.className = 'ingredient-table';
+
+  const COLS = [
+    { key: 'name',        label: 'Nombre',          sortable: true  },
+    { key: 'minQuantity', label: 'Cantidad mínima', sortable: false },
+    { key: 'store',       label: 'Comercio',        sortable: true  },
+    { key: 'product',     label: 'Producto',        sortable: false },
+  ];
+
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  COLS.forEach(({ key, label, sortable }) => {
+    const th = document.createElement('th');
+    if (!sortable) {
+      th.textContent = label;
+    } else {
+      const isActive = _consumableSort.col === key;
+      const arrow = isActive ? (_consumableSort.dir === 'asc' ? '↑' : '↓') : '';
+      th.className = 'ingredient-th-sortable' + (isActive ? ' is-active' : '');
+      th.innerHTML = `${label}<span class="sort-arrow">${arrow}</span>`;
+      th.addEventListener('click', () => {
+        if (_consumableSort.col === key) {
+          _consumableSort.dir = _consumableSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          _consumableSort = { col: key, dir: 'asc' };
+        }
+        renderConsumables();
+      });
+    }
+    headerRow.appendChild(th);
+  });
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  sorted.forEach((consumable) => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = consumable.id;
+
+    const nameTd = document.createElement('td');
+    nameTd.textContent = consumable.name;
+    tr.appendChild(nameTd);
+
+    const minQtyTd = document.createElement('td');
+    minQtyTd.textContent = consumable.minQuantity || '';
+    tr.appendChild(minQtyTd);
+
+    const storeTd = document.createElement('td');
+    storeTd.textContent = settingsLabel('consumable-store', consumable.store);
+    tr.appendChild(storeTd);
+
+    const productTd = document.createElement('td');
+    productTd.textContent = consumable.product || '';
+    tr.appendChild(productTd);
+
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', () => {
+      document.querySelectorAll('#consumableList .ingredient-table tr.is-selected')
+        .forEach((r) => r.classList.remove('is-selected'));
+      tr.classList.add('is-selected');
+      startEditConsumable(consumable.id);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  consumableList.appendChild(table);
+}
+
+function renderConsumablesList(sortedConsumables) {
+  const ul = document.createElement('ul');
+  sortedConsumables.forEach((consumable) => {
+    const li = document.createElement('li');
+    li.className = 'ingredient-row';
+    li.dataset.id = consumable.id;
+
+    li.innerHTML = `
+      <div class="ingredient-row-content">
+        <div class="ingredient-row-left">
+          <span class="ingredient-row-name">${consumable.name}</span>
+        </div>
+
+        <span class="recipe-row-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </div>
+    `;
+
+    li.addEventListener('click', () => {
+      startEditConsumable(consumable.id);
+    });
+
+    ul.appendChild(li);
+  });
+  consumableList.appendChild(ul);
+}
+
+function startEditConsumable(id) {
+  const consumable = consumables.find((c) => c.id === id);
+  if (!consumable) return;
+
+  editingConsumableId = id;
+
+  if (consumableModalTitle) {
+    consumableModalTitle.textContent = 'Editar consumible';
+  }
+
+  consumableForm.reset();
+
+  consumableNameInput.value = consumable.name;
+  if (consumableMinQuantityInput) consumableMinQuantityInput.value = consumable.minQuantity || '';
+  populateSettingsSelect(consumableStoreSelect, 'consumable-store', consumable.store || '', 'Selecciona un comercio...');
+  if (consumableProductInput) consumableProductInput.value = consumable.product || '';
+
+  consumableForm.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
+
+  consumableEditPanel?.classList.add('is-editing');
+  openConsumablePanel();
+}
+
+if (consumableForm) {
+  consumableForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name = consumableNameInput.value.trim();
+    const store = consumableStoreSelect.value;
+
+    if (!name || !store) return;
+
+    if (editingConsumableId) {
+      const consumable = consumables.find((c) => c.id === editingConsumableId);
+      if (!consumable) return;
+
+      consumable.name = name;
+      consumable.minQuantity = consumableMinQuantityInput?.value.trim() || null;
+      consumable.store = store || null;
+      consumable.product = consumableProductInput?.value.trim() || null;
+    } else {
+      consumables.push({
+        id: Date.now(),
+        name,
+        minQuantity: consumableMinQuantityInput?.value.trim() || null,
+        store: store || null,
+        product: consumableProductInput?.value.trim() || null,
+      });
+    }
+
+    saveConsumables();
+    renderConsumables();
+
+    consumableForm.reset();
+    consumableEditPanel?.classList.remove('is-editing');
+    closeConsumablePanel();
+    editingConsumableId = null;
+
+    consumableForm
+      .querySelector('button[type="submit"]')
+      .textContent = 'Guardar consumible';
+  });
+}
+
+function autoSaveConsumable() {
+  if (!editingConsumableId) return;
+
+  const consumable = consumables.find((c) => c.id === editingConsumableId);
+  if (!consumable) return;
+
+  const name = consumableNameInput.value.trim();
+  const store = consumableStoreSelect.value;
+  if (!name || !store) return;
+
+  consumable.name = name;
+  consumable.minQuantity = consumableMinQuantityInput?.value.trim() || null;
+  consumable.store = store || null;
+  consumable.product = consumableProductInput?.value.trim() || null;
+
+  saveConsumables();
+  renderConsumables();
+
+  const savedId = editingConsumableId;
+  document.querySelector(`#consumableList .ingredient-table tr[data-id="${savedId}"]`)
+    ?.classList.add('is-selected');
+}
+
+[
+  consumableNameInput, consumableMinQuantityInput,
+  consumableStoreSelect, consumableProductInput,
+].forEach((el) => {
+  if (el) el.addEventListener('change', autoSaveConsumable);
+});
+
+function deleteConsumable(id) {
+  consumables = consumables.filter((c) => c.id !== id);
+  saveConsumables();
+  renderConsumables();
+}
+
+renderConsumables();
+
+let _consumablesWasDesktop = window.innerWidth >= 768;
+window.addEventListener('resize', () => {
+  const isDesktopNow = window.innerWidth >= 768;
+  if (isDesktopNow !== _consumablesWasDesktop) {
+    _consumablesWasDesktop = isDesktopNow;
+    renderConsumables();
+  }
+});
+
+const consumableSearchWrapper = document.getElementById('consumableSearchWrapper');
+const consumableSearchBtn = document.getElementById('consumableSearchBtn');
+const consumableSearchInput = document.getElementById('consumableSearchInput');
+const consumableSearchCloseBtn = document.getElementById('consumableSearchClose');
+
+function closeConsumableSearch() {
+  _consumableSearch = '';
+  if (consumableSearchInput) consumableSearchInput.value = '';
+  if (consumableSearchWrapper) consumableSearchWrapper.classList.remove('is-open');
+  renderConsumables();
+}
+
+if (consumableSearchBtn && consumableSearchWrapper && consumableSearchInput) {
+  consumableSearchBtn.addEventListener('click', () => {
+    consumableSearchWrapper.classList.add('is-open');
+    consumableSearchInput.focus();
+  });
+
+  consumableSearchInput.addEventListener('input', () => {
+    _consumableSearch = consumableSearchInput.value;
+    renderConsumables();
+  });
+
+  consumableSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeConsumableSearch();
+  });
+}
+
+if (consumableSearchCloseBtn) {
+  consumableSearchCloseBtn.addEventListener('click', closeConsumableSearch);
+}
+
+// -----------------------
+// AJUSTES: UBICACIONES Y COMERCIOS (interfaz del modal)
+// -----------------------
+const SETTINGS_SCOPES = {
+  ingredient: {
+    modalId: 'ingredientSettingsModal',
+    openBtnId: 'openIngredientSettingsModal',
+    closeBtnId: 'closeIngredientSettingsModal',
+    lists: {
+      'ingredient-location': 'addIngredientSettingsLocation',
+      'ingredient-store': 'addIngredientSettingsStore',
+    },
+  },
+  consumable: {
+    modalId: 'consumableSettingsModal',
+    openBtnId: 'openConsumableSettingsModal',
+    closeBtnId: 'closeConsumableSettingsModal',
+    lists: {
+      'consumable-location': 'addConsumableSettingsLocation',
+      'consumable-store': 'addConsumableSettingsStore',
+    },
+  },
+};
+
+function refreshIngredientSelects() {
+  populateSettingsSelect(locationSelect, 'ingredient-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(storeSelect, 'ingredient-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(newLocationSelect, 'ingredient-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(newStoreSelect, 'ingredient-store', undefined, 'Selecciona un comercio...');
+}
+
+function refreshConsumableSelects() {
+  populateSettingsSelect(consumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
+}
+
+
+function makeSettingsIconBtn({ className, label, svg, disabled = false }) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `settings-row-btn ${className}`;
+  btn.setAttribute('aria-label', label);
+  btn.innerHTML = svg;
+  if (disabled) btn.disabled = true;
+  return btn;
+}
+
+const SETTINGS_ICONS = {
+  up: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10L8 6L12 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  down: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  edit: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2a1.885 1.885 0 0 1 2.667 2.667L4.889 13.778 2 14l.222-2.889L11.333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  delete: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4h12M6 4V2.667A.667.667 0 0 1 6.667 2h2.666a.667.667 0 0 1 .667.667V4m2 0v9.333a.667.667 0 0 1-.667.667H4.667A.667.667 0 0 1 4 13.333V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  confirm: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+function commitSettingsEdit(listKey, id, rawName) {
+  const cfg = SETTINGS_LISTS[listKey];
+  const items = cfg.getItems() || [];
+  const item = items.find((it) => it.id === id);
+  if (!item) return;
+
+  const name = rawName.trim();
+
+  if (!name) {
+    // Nombre vacío: si era una entrada recién creada, se descarta.
+    if (!item.name) {
+      cfg.setItems(items.filter((it) => it.id !== id));
+      saveSettingsList(listKey);
+      cfg.onChange();
+    }
+    _settingsEditing = null;
+    renderSettings();
+    return;
+  }
+
+  item.name = name;
+  // La clave interna solo se genera la primera vez. Renombrar nunca la cambia,
+  // para que los registros que ya la usan sigan apuntando a esta entrada.
+  if (!item.value) item.value = slugifySettingValue(name) || String(id);
+
+  saveSettingsList(listKey);
+  cfg.onChange();
+  _settingsEditing = null;
+  renderSettings();
+}
+
+function renderSettingsList(listKey) {
+  const cfg = SETTINGS_LISTS[listKey];
+  const listEl = document.getElementById(cfg.listElId);
+  if (!listEl) return;
+
+  const items = cfg.getItems() || [];
+  listEl.innerHTML = '';
+
+  if (items.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'settings-empty';
+    empty.textContent = `No hay ${cfg.plural} todavía.`;
+    listEl.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const li = document.createElement('li');
+    li.className = 'settings-row';
+    li.dataset.id = item.id;
+
+    const isEditing = _settingsEditing
+      && _settingsEditing.listKey === listKey
+      && _settingsEditing.id === item.id;
+
+    const actions = document.createElement('div');
+    actions.className = 'settings-row-actions';
+
+    if (isEditing) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'settings-row-input';
+      input.value = item.name || '';
+      input.placeholder = cfg.placeholder;
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          input.dataset.cancelled = 'true';
+          commitSettingsEdit(listKey, item.id, item.name || '');
+        }
+      });
+      input.addEventListener('blur', () => {
+        if (input.dataset.cancelled === 'true') return;
+        commitSettingsEdit(listKey, item.id, input.value);
+      });
+      li.appendChild(input);
+
+      const confirmBtn = makeSettingsIconBtn({
+        className: 'settings-row-btn--confirm',
+        label: 'Guardar',
+        svg: SETTINGS_ICONS.confirm,
+      });
+      // mousedown en lugar de click: el blur del input llega antes que el
+      // click y volvería a pintar la lista, perdiendo el botón.
+      confirmBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        commitSettingsEdit(listKey, item.id, input.value);
+      });
+      actions.appendChild(confirmBtn);
+      li.appendChild(actions);
+
+      listEl.appendChild(li);
+      requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+      });
+      return;
+    }
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'settings-row-name';
+    nameEl.textContent = item.name;
+    li.appendChild(nameEl);
+
+    const upBtn = makeSettingsIconBtn({
+      className: 'settings-row-btn--move',
+      label: 'Subir',
+      svg: SETTINGS_ICONS.up,
+      disabled: index === 0,
+    });
+    upBtn.addEventListener('click', () => moveSettingsItem(listKey, item.id, -1));
+
+    const downBtn = makeSettingsIconBtn({
+      className: 'settings-row-btn--move',
+      label: 'Bajar',
+      svg: SETTINGS_ICONS.down,
+      disabled: index === items.length - 1,
+    });
+    downBtn.addEventListener('click', () => moveSettingsItem(listKey, item.id, 1));
+
+    const editBtn = makeSettingsIconBtn({
+      className: 'settings-row-btn--edit',
+      label: `Editar ${cfg.noun}`,
+      svg: SETTINGS_ICONS.edit,
+    });
+    editBtn.addEventListener('click', () => {
+      _settingsEditing = { listKey, id: item.id };
+      renderSettings();
+    });
+
+    const deleteBtn = makeSettingsIconBtn({
+      className: 'settings-row-btn--delete',
+      label: `Eliminar ${cfg.noun}`,
+      svg: SETTINGS_ICONS.delete,
+    });
+    deleteBtn.addEventListener('click', () => {
+      // Avisar si la entrada está en uso: los registros no se tocan, pero
+      // conviene saber que se quedarán apuntando a algo que ya no está en la lista.
+      const used = cfg.usageCount(item.value);
+      const warning = used > 0
+        ? `\n\nHay ${used} ${cfg.usageNoun}${used === 1 ? '' : 's'} usando esta ${cfg.noun}. No se borrarán ni perderán el dato, pero dejará de aparecer en la lista.`
+        : '';
+      if (!confirm(`¿Seguro que quieres eliminar "${item.name}"?${warning}`)) return;
+      cfg.setItems((cfg.getItems() || []).filter((it) => it.id !== item.id));
+      saveSettingsList(listKey);
+      cfg.onChange();
+      renderSettings();
+    });
+
+    [upBtn, downBtn, editBtn, deleteBtn].forEach((b) => actions.appendChild(b));
+    li.appendChild(actions);
+    listEl.appendChild(li);
+  });
+}
+
+function moveSettingsItem(listKey, id, delta) {
+  const cfg = SETTINGS_LISTS[listKey];
+  const items = [...(cfg.getItems() || [])];
+  const from = items.findIndex((it) => it.id === id);
+  const to = from + delta;
+  if (from === -1 || to < 0 || to >= items.length) return;
+  [items[from], items[to]] = [items[to], items[from]];
+  cfg.setItems(items);
+  saveSettingsList(listKey);
+  cfg.onChange();
+  renderSettings();
+}
+
+function addSettingsItem(listKey) {
+  const cfg = SETTINGS_LISTS[listKey];
+  const items = [...(cfg.getItems() || [])];
+  const id = Date.now();
+  items.push({ id, value: '', name: '' });
+  cfg.setItems(items);
+  _settingsEditing = { listKey, id };
+  renderSettings();
+}
+
+function renderSettings() {
+  ensureSettingsSeed();
+  Object.keys(SETTINGS_LISTS).forEach(renderSettingsList);
+}
+
+Object.values(SETTINGS_SCOPES).forEach((scope) => {
+  const modalEl = document.getElementById(scope.modalId);
+
+  document.getElementById(scope.openBtnId)?.addEventListener('click', () => {
+    _settingsEditing = null;
+    renderSettings();
+    openModal(modalEl);
+  });
+
+  document.getElementById(scope.closeBtnId)?.addEventListener('click', () => {
+    _settingsEditing = null;
+    closeModal(modalEl);
+  });
+
+  modalEl?.addEventListener('click', (e) => {
+    if (e.target === modalEl) {
+      _settingsEditing = null;
+      closeModal(modalEl);
+    }
+  });
+
+  Object.entries(scope.lists).forEach(([listKey, addBtnId]) => {
+    document.getElementById(addBtnId)?.addEventListener('click', () => addSettingsItem(listKey));
+  });
+});
+
+ensureSettingsSeed();
+refreshIngredientSelects();
+refreshConsumableSelects();
 
 // -----------------------
 // COCINADOS
@@ -4162,6 +5045,32 @@ document.getElementById('ingredientEditDeleteBtn')?.addEventListener('click', ()
   }
 });
 
+const consumableEditDropdown = document.getElementById('consumableEditDropdown');
+
+document.getElementById('consumableEditMenuBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  consumableEditDropdown.hidden = !consumableEditDropdown.hidden;
+});
+
+document.addEventListener('click', () => {
+  if (consumableEditDropdown && !consumableEditDropdown.hidden) {
+    consumableEditDropdown.hidden = true;
+  }
+});
+
+document.getElementById('consumableEditDeleteBtn')?.addEventListener('click', () => {
+  consumableEditDropdown.hidden = true;
+  if (!editingConsumableId) return;
+  const consumable = consumables.find(c => c.id === editingConsumableId);
+  if (!consumable) return;
+  const ok = confirm(`¿Seguro que quieres eliminar "${consumable.name}"?`);
+  if (ok) {
+    closeConsumablePanel();
+    deleteConsumable(editingConsumableId);
+    editingConsumableId = null;
+  }
+});
+
 const recipeEditDropdown = document.getElementById('recipeEditDropdown');
 
 document.getElementById('recipeEditMenuBtn')?.addEventListener('click', (e) => {
@@ -4763,24 +5672,59 @@ function startFirebaseListeners() {
   _listenersStarted = true;
 
   const paths = [
-    { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = v; }, render: () => renderIngredients() },
+    { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = Array.isArray(v) ? v : []; }, render: () => renderIngredients() },
+    { key: 'consumables',      ref: 'compra/consumables',      set: v => { consumables      = Array.isArray(v) ? v : []; }, render: () => renderConsumables() },
+    { key: 'settingsIngredientLocations', ref: 'compra/settingsIngredientLocations', set: v => { settingsIngredientLocations = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
+    { key: 'settingsIngredientStores',    ref: 'compra/settingsIngredientStores',    set: v => { settingsIngredientStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
+    { key: 'settingsConsumableLocations', ref: 'compra/settingsConsumableLocations', set: v => { settingsConsumableLocations = Array.isArray(v) ? v : []; }, render: () => renderSettings() },
+    { key: 'settingsConsumableStores',    ref: 'compra/settingsConsumableStores',    set: v => { settingsConsumableStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshConsumableSelects(); renderConsumables(); } },
     { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = Array.isArray(v) ? v.map(r => ({ ...r, ingredients: r.ingredients || [] })) : []; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
-    { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = v; }, render: () => renderCalendarEntries() },
+    { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = Array.isArray(v) ? v : []; }, render: () => renderCalendarEntries() },
     { key: 'calendarCooked',   ref: 'compra/calendarCooked',   set: v => { calendarCooked   = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }, render: () => renderCalendarEntries() },
     { key: 'lista2Items',      ref: 'compra/lista2Items',      set: v => { lista2Items      = Array.isArray(v) ? v.map(item => ({ ...item, ingredientNames: item.ingredientNames || [] })) : []; }, render: () => renderLista2() },
-    { key: 'lista2Checked',    ref: 'compra/lista2Checked',    set: v => { lista2Checked    = v; }, render: () => renderLista2() },
-    { key: 'lista2ShopQty',    ref: 'compra/lista2ShopQty',    set: v => { lista2ShopQty    = v; }, render: () => renderLista2() },
-    { key: 'purchasedItems',   ref: 'compra/purchasedItems',   set: v => { purchasedItems   = v; }, render: () => { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } },
+    { key: 'lista2Checked',    ref: 'compra/lista2Checked',    set: v => { lista2Checked    = (v && typeof v === 'object') ? v : {}; }, render: () => renderLista2() },
+    { key: 'lista2ShopQty',    ref: 'compra/lista2ShopQty',    set: v => { lista2ShopQty    = (v && typeof v === 'object') ? v : {}; }, render: () => renderLista2() },
+    { key: 'purchasedItems',   ref: 'compra/purchasedItems',   set: v => { purchasedItems   = (v && typeof v === 'object') ? v : {}; }, render: () => { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } },
     { key: 'lastShoppingList', ref: 'compra/lastShoppingList', set: v => { lastShoppingList = v; }, render: () => { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } },
   ];
 
+  // Rutas de la versión anterior de los ajustes (lista única editada desde
+  // Consumibles). Se leen para migrarlas a las listas de Consumibles en
+  // dispositivos donde no quede el localStorage antiguo.
+  const legacySettingsPaths = [
+    { ref: 'compra/settingsLocations', target: 'settingsConsumableLocations' },
+    { ref: 'compra/settingsStores',    target: 'settingsConsumableStores' },
+  ];
+
   // Initial one-time load from Firebase; migrate from localStorage if Firebase is empty
-  Promise.all(paths.map(p => db.ref(p.ref).once('value')))
-    .then(snaps => {
+  Promise.all([
+    ...paths.map(p => db.ref(p.ref).once('value')),
+    ...legacySettingsPaths.map(p => db.ref(p.ref).once('value')),
+  ])
+    .then(allSnaps => {
+      const snaps = allSnaps.slice(0, paths.length);
+      const legacySnaps = allSnaps.slice(paths.length);
+
+      // Lo que había en las rutas antiguas manda sobre la semilla local, para
+      // no perder las listas que ya se hubieran configurado desde Consumibles.
+      const legacyValues = {};
+      legacySnaps.forEach((snap, i) => {
+        const val = fromFirebase(snap.val());
+        if (Array.isArray(val) && val.length) {
+          legacyValues[legacySettingsPaths[i].target] = val;
+        }
+      });
+
       snaps.forEach((snap, i) => {
         const val = fromFirebase(snap.val());
         if (val !== null && val !== undefined) {
           paths[i].set(val);
+        } else if (legacyValues[paths[i].key]) {
+          // Ruta nueva vacía pero con datos en la ruta antigua: se migran.
+          const migrated = legacyValues[paths[i].key];
+          paths[i].set(migrated);
+          localStorage.setItem(paths[i].key, JSON.stringify(migrated));
+          db.ref(paths[i].ref).set(migrated);
         } else {
           // Firebase empty for this key — migrate from localStorage
           const local = localStorage.getItem(paths[i].key);
@@ -4830,17 +5774,23 @@ function startFirebaseListeners() {
       }
 
       // Full re-render after initial load
+      try { renderSettings(); } catch(e) {}
+      try { refreshIngredientSelects(); } catch(e) {}
+      try { refreshConsumableSelects(); } catch(e) {}
       try { renderIngredients(); } catch(e) {}
+      try { renderConsumables(); } catch(e) {}
       try { renderRecipes(); } catch(e) {}
       try { renderCalendarEntries(); } catch(e) {}
       try { renderLista2(); } catch(e) {}
       try { if (typeof renderShoppingListFromState === 'function') renderShoppingListFromState(); } catch(e) {}
 
-      // Set up persistent real-time listeners for cross-device sync
+      // Set up persistent real-time listeners for cross-device sync.
+      // No se ignoran los valores null: Firebase convierte los arrays/objetos
+      // vacíos en null al guardarlos, así que null es un estado real (lista
+      // vaciada/borrada) y debe propagarse igualmente a los demás dispositivos.
       paths.forEach(p => {
         db.ref(p.ref).on('value', snap => {
           const val = fromFirebase(snap.val());
-          if (val === null || val === undefined) return;
           p.set(val);
           try { p.render(); } catch (e) {}
         });

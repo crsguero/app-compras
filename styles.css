@@ -28,6 +28,7 @@ h2 {
 }
 
 #ingredients .header h2,
+#consumables .header h2,
 #recipes .header h2,
 #planning .header h2 {
   font-size: 24px;
@@ -725,7 +726,10 @@ select:has(option[value=""]:checked) {
 }
 
 #newIngredientModal .modal-content,
-#newRecipeModal .modal-content {
+#newRecipeModal .modal-content,
+#newConsumableModal .modal-content,
+#ingredientSettingsModal .modal-content,
+#consumableSettingsModal .modal-content {
   transform: none;
   transition: none;
 }
@@ -1146,6 +1150,8 @@ select:has(option[value=""]:checked) {
 #deleteLista2ItemBtn svg,
 #ingredientEditDeleteBtn,
 #ingredientEditDeleteBtn svg,
+#consumableEditDeleteBtn,
+#consumableEditDeleteBtn svg,
 #recipeEditDeleteBtn,
 #recipeEditDeleteBtn svg,
 #deleteCalendarEntryBtn,
@@ -1155,6 +1161,7 @@ select:has(option[value=""]:checked) {
 
 #deleteLista2ItemBtn:hover,
 #ingredientEditDeleteBtn:hover,
+#consumableEditDeleteBtn:hover,
 #recipeEditDeleteBtn:hover,
 #deleteCalendarEntryBtn:hover {
   background: var(--danger-ui);
@@ -2256,12 +2263,14 @@ select:has(option[value=""]:checked) {
 
 /* INGREDIENTES */
 
-#ingredients {
+#ingredients,
+#consumables {
   margin-top: -24px;
   margin-bottom: -24px;
 }
 
-#ingredients .header {
+#ingredients .header,
+#consumables .header {
   display: flex;
   justify-content: space-between;
   padding-bottom: 24px;
@@ -2271,6 +2280,7 @@ select:has(option[value=""]:checked) {
 }
 
 #ingredients .header-title-row,
+#consumables .header-title-row,
 #planning .header-title-row {
   display: flex;
   align-items: center;
@@ -2290,11 +2300,13 @@ select:has(option[value=""]:checked) {
   #shopping-list-2 .header,
   #planning .header,
   #recipes .header,
+  #consumables .header,
   #ingredients .header {
     align-items: center;
   }
 
   #ingredients .header,
+  #consumables .header,
   #recipes .header,
   #planning .header {
     width: calc(100vw - 48px);
@@ -2306,6 +2318,7 @@ select:has(option[value=""]:checked) {
   }
 
   #ingredients .header-title-row,
+  #consumables .header-title-row,
   #recipes .header-title-row,
   #planning .header-title-row {
     display: flex;
@@ -2335,7 +2348,8 @@ select:has(option[value=""]:checked) {
   }
 }
 
-#ingredients .header .primary-btn {
+#ingredients .header .primary-btn,
+#consumables .header .primary-btn {
   background-color: #FFC900;
   border-radius: 20px;
   height: 40px;
@@ -2343,7 +2357,8 @@ select:has(option[value=""]:checked) {
   border: none;
 }
 
-#ingredients .header .primary-btn svg {
+#ingredients .header .primary-btn svg,
+#consumables .header .primary-btn svg {
   color: white;
 }
 
@@ -2434,6 +2449,166 @@ select:has(option[value=""]:checked) {
 
 .filter-btn-wrapper {
   position: relative;
+}
+
+/* Botón de ajustes (rueda) — mismo aspecto que buscar/filtrar */
+.settings-btn {
+  background: none;
+  border: 1px solid #E8E7E5;
+  border-radius: 20px;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B4B48;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background: #EEEDE9;
+  border-color: #CDCBC7;
+}
+
+/* ── Modal de ajustes: ubicaciones y comercios ── */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section + .settings-section {
+  margin-top: 16px;
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.settings-empty {
+  font-size: 14px;
+  line-height: 20px;
+  color: #9C9894;
+  padding: 8px 0;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-tertiary);
+}
+
+.settings-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-row-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid #CDCBC7;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: white;
+  outline: none;
+}
+
+.settings-row-input:focus {
+  border-color: var(--color-primary);
+}
+
+.settings-row-input::placeholder {
+  color: #9C9894;
+  font-weight: 400;
+}
+
+.settings-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.settings-row-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  color: #4B4B48;
+  cursor: pointer;
+}
+
+.settings-row-btn:hover {
+  background: #EEEDE9;
+}
+
+.settings-row-btn:disabled {
+  color: #D6D4D0;
+  cursor: default;
+}
+
+.settings-row-btn:disabled:hover {
+  background: none;
+}
+
+.settings-row-btn--delete {
+  color: var(--danger);
+}
+
+.settings-row-btn--delete:hover {
+  background: var(--danger-ui);
+}
+
+.settings-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.settings-add-btn:hover {
+  text-decoration: underline;
+}
+
+.settings-add-btn svg {
+  flex-shrink: 0;
 }
 
 .filter-btn {
@@ -2549,7 +2724,8 @@ select:has(option[value=""]:checked) {
   text-decoration: underline;
 }
 
-#ingredientList {
+#ingredientList,
+#consumableList {
   margin-top: 136px;
   margin-bottom: 56px;
 }
@@ -2833,7 +3009,8 @@ select:has(option[value=""]:checked) {
   margin-bottom: 24px;
 }
 
-#ingredientModalTitle {
+#ingredientModalTitle,
+#consumableModalTitle {
   font-size: 24px;
   line-height: 32px;
   font-weight: 600;
@@ -2889,7 +3066,8 @@ select:has(option[value=""]:checked) {
   }
 
   .ingredient-sheet-close-btn,
-  #ingredientEditMenuBtn {
+  #ingredientEditMenuBtn,
+  #consumableEditMenuBtn {
     display: flex;
     background: none;
     border: none;
@@ -2954,12 +3132,14 @@ select:has(option[value=""]:checked) {
   }
 }
 
-#ingredientForm {
+#ingredientForm,
+#consumableForm {
   flex-direction: column;
   flex: 1;
 }
 
-#ingredientForm input {
+#ingredientForm input,
+#consumableForm input {
   flex: none;
 }
 
@@ -3220,6 +3400,7 @@ label.toggle input[type="checkbox"]:checked::after {
   #shoppingList,
   #shoppingTabByLocation,
   #ingredientList,
+  #consumableList,
   #calendarList,
   #recipeList {
     margin-top: 0;
@@ -3500,37 +3681,44 @@ label.toggle input[type="checkbox"]:checked::after {
     max-height: calc(100vh - 80px);
   }
 
-  #ingredients {
+  #ingredients,
+  #consumables {
     margin-top: 0;
   }
 
-  #ingredients.active {
+  #ingredients.active,
+  #consumables.active {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
     margin-right: -24px;
   }
 
-  #ingredientsContent {
+  #ingredientsContent,
+  #consumablesContent {
     flex: 1;
     min-width: 0;
     padding-right: 24px;
   }
 
-  #ingredients .header {
+  #ingredients .header,
+  #consumables .header {
     position: sticky;
     top: 0;
   }
 
-  #ingredients .header-title-row {
+  #ingredients .header-title-row,
+  #consumables .header-title-row {
     align-items: center;
   }
 
-  #ingredientList {
+  #ingredientList,
+  #consumableList {
     margin-top: 0;
   }
 
-  #ingredientsMain {
+  #ingredientsMain,
+  #consumablesMain {
     flex: 1;
     min-width: 0;
   }
@@ -3571,7 +3759,8 @@ label.toggle input[type="checkbox"]:checked::after {
   }
 
   .ingredient-sheet-close-btn,
-  #ingredientEditMenuBtn {
+  #ingredientEditMenuBtn,
+  #consumableEditMenuBtn {
     background: none;
     border: none;
     padding: 0;
@@ -3587,12 +3776,14 @@ label.toggle input[type="checkbox"]:checked::after {
   }
 
   .ingredient-sheet-close-btn:hover,
-  #ingredientEditMenuBtn:hover {
+  #ingredientEditMenuBtn:hover,
+  #consumableEditMenuBtn:hover {
     color: var(--color-secondary);
   }
 
 
-  #closeIngredientModal {
+  #closeIngredientModal,
+  #closeConsumableModal {
     display: none;
   }
 

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Ingredientes</title>
+  <title>Compras</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -80,6 +80,20 @@
     <path d="M10 18.4V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <p>Ingredientes</p>
+  </button>
+  <button type="button" class="tab-btn" data-tab="consumables">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="14.5" y="4.5" width="4" height="4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M18.5 8.5L20.5 10.5V20.5C20.5 21.0523 20.0523 21.5 19.5 21.5H13.5C12.9477 21.5 12.5 21.0523 12.5 20.5V10.5L14.5 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.5 13.5L20.5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.5 18.5L20.5 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M3.5 3.5H3.51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 5.5H7.51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M3.5 7.5H3.51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 9.5H7.51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M3.5 11.5H3.51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p>Consumibles</p>
   </button>
   </div>
   <button type="button" id="logout-btn" class="logout-btn">
@@ -806,6 +820,12 @@
           </div>
         </div>
       </div>
+      <button type="button" id="openIngredientSettingsModal" class="settings-btn" aria-label="Ajustes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button type="button" id="openIngredientModal" class="primary-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
@@ -965,6 +985,247 @@
     </div>
   </div>
 </section>
+
+<section id="consumables" class="tab-content">
+
+<div id="consumablesContent">
+<div class="header">
+    <button type="button" class="mobile-menu-btn" aria-label="Menú">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 12H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 6H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 18H21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="header-title-row">
+    <h2>Consumibles</h2>
+    <div class="header-actions">
+      <div class="search-btn-wrapper" id="consumableSearchWrapper">
+        <button type="button" id="consumableSearchBtn" class="search-btn" aria-label="Buscar consumibles">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M10.5 10.5l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div id="consumableSearchField" class="search-field">
+          <svg class="search-field-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M10.5 10.5l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input type="text" id="consumableSearchInput" placeholder="Buscar..." autocomplete="off" />
+          <button type="button" id="consumableSearchClose" class="search-close-btn" aria-label="Cerrar búsqueda">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button type="button" id="openConsumableSettingsModal" class="settings-btn" aria-label="Ajustes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button type="button" id="openConsumableModal" class="primary-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+    </div>
+  </div>
+
+<div id="consumablesBody">
+  <div id="consumablesMain">
+    <div id="consumableList"></div>
+  </div>
+</div>
+</div>
+<div id="consumableEditPanel" class="ingredient-edit-panel">
+    <div class="ingredient-edit-panel-inner">
+
+      <div class="ingredient-edit-action-bar">
+        <button type="button" id="closeConsumableSheetBtn" class="ingredient-sheet-close-btn" aria-label="Cerrar">
+          <svg class="close-icon-desktop" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 17L18 12L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 17L11 12L6 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="close-icon-mobile" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="ingredient-edit-menu-wrapper">
+          <button type="button" id="consumableEditMenuBtn" aria-label="Opciones">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 13C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11C18.4477 11 18 11.4477 18 12C18 12.5523 18.4477 13 19 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 13C5.55228 13 6 12.5523 6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div id="consumableEditDropdown" class="actions-dropdown" hidden>
+            <button type="button" id="consumableEditDeleteBtn" aria-label="Eliminar consumible">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 5H4.16667H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15.8334 4.99996V16.6666C15.8334 17.1087 15.6578 17.5326 15.3453 17.8451C15.0327 18.1577 14.6088 18.3333 14.1667 18.3333H5.83341C5.39139 18.3333 4.96746 18.1577 4.6549 17.8451C4.34234 17.5326 4.16675 17.1087 4.16675 16.6666V4.99996M6.66675 4.99996V3.33329C6.66675 2.89127 6.84234 2.46734 7.1549 2.15478C7.46746 1.84222 7.89139 1.66663 8.33341 1.66663H11.6667C12.1088 1.66663 12.5327 1.84222 12.8453 2.15478C13.1578 2.46734 13.3334 2.89127 13.3334 3.33329V4.99996" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8.33325 9.16663V14.1666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M11.6667 9.16663V14.1666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Eliminar consumible</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="consumableModalTitle">Nuevo consumible</h2>
+
+      <form id="consumableForm">
+
+        <label>Nombre</label>
+        <input type="text" id="consumableNameInput" class="text-input" placeholder="Introduce un nombre..." required />
+
+        <label for="consumableMinQuantityInput">Cantidad mínima</label>
+        <input type="text" id="consumableMinQuantityInput" class="text-input" placeholder="Introduce una cantidad...">
+        <p class="field-helper">Cantidad de productos de supermercado.</p>
+
+        <span class="form-section-label">Supermercado</span>
+
+        <div class="select-field">
+          <label for="consumableStoreSelect">Comercio</label>
+          <select id="consumableStoreSelect" required>
+            <option value="">Selecciona un comercio...</option>
+            <option value="fruteria">Frutería</option>
+            <option value="eci">Supermercado ECI</option>
+            <option value="hiperdino">Hiperdino</option>
+            <option value="panaderia">Panadería</option>
+            <option value="mercadona">Mercadona</option>
+          </select>
+        </div>
+
+        <label for="consumableProductInput">Producto</label>
+        <input type="text" id="consumableProductInput" class="text-input" placeholder="Describe el producto..." />
+
+        <div class="modal-actions">
+          <button type="button" id="closeConsumableModal" class="secondary">Cancelar</button>
+          <button type="submit" class="primary">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- Modal: Nuevo consumible -->
+<div id="newConsumableModal" class="modal modal--form hidden" aria-hidden="true">
+  <div class="modal-content modal__sheet">
+    <div class="modal-header">
+      <h2>Nuevo consumible</h2>
+    </div>
+    <form id="newConsumableForm">
+
+      <label for="newConsumableNameInput">Nombre</label>
+      <input type="text" id="newConsumableNameInput" class="text-input" placeholder="Introduce un nombre..." required />
+
+      <label for="newConsumableMinQuantityInput">Cantidad mínima</label>
+      <input type="text" id="newConsumableMinQuantityInput" class="text-input" placeholder="Introduce una cantidad...">
+      <p class="field-helper">Cantidad de productos de supermercado.</p>
+
+      <span class="form-section-label">Supermercado</span>
+
+      <div class="select-field">
+        <label for="newConsumableStoreSelect">Comercio</label>
+        <select id="newConsumableStoreSelect" required>
+          <option value="">Selecciona un comercio...</option>
+          <option value="fruteria">Frutería</option>
+          <option value="eci">Supermercado ECI</option>
+          <option value="hiperdino">Hiperdino</option>
+          <option value="panaderia">Panadería</option>
+          <option value="mercadona">Mercadona</option>
+        </select>
+      </div>
+
+      <label for="newConsumableProductInput">Producto</label>
+      <input type="text" id="newConsumableProductInput" class="text-input" placeholder="Describe el producto..." />
+
+      <div class="modal-actions">
+        <button type="button" id="closeNewConsumableModal" class="secondary">Cancelar</button>
+        <button type="submit" class="primary">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Ajustes de Ingredientes (ubicaciones y comercios) -->
+<div id="ingredientSettingsModal" class="modal modal--form hidden" aria-hidden="true">
+  <div class="modal-content modal__sheet">
+    <div class="modal-header">
+      <h2>Ajustes</h2>
+    </div>
+
+    <div class="settings-body">
+      <div class="settings-section">
+        <span class="form-section-label">Ubicaciones</span>
+        <ul id="ingredientSettingsLocationsList" class="settings-list"></ul>
+        <button type="button" id="addIngredientSettingsLocation" class="settings-add-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span>Añadir ubicación</span>
+        </button>
+      </div>
+
+      <div class="settings-section">
+        <span class="form-section-label">Comercios</span>
+        <ul id="ingredientSettingsStoresList" class="settings-list"></ul>
+        <button type="button" id="addIngredientSettingsStore" class="settings-add-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span>Añadir comercio</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" id="closeIngredientSettingsModal" class="secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ajustes de Consumibles (ubicaciones y comercios) -->
+<div id="consumableSettingsModal" class="modal modal--form hidden" aria-hidden="true">
+  <div class="modal-content modal__sheet">
+    <div class="modal-header">
+      <h2>Ajustes</h2>
+    </div>
+
+    <div class="settings-body">
+      <div class="settings-section">
+        <span class="form-section-label">Ubicaciones</span>
+        <ul id="consumableSettingsLocationsList" class="settings-list"></ul>
+        <button type="button" id="addConsumableSettingsLocation" class="settings-add-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span>Añadir ubicación</span>
+        </button>
+      </div>
+
+      <div class="settings-section">
+        <span class="form-section-label">Comercios</span>
+        <ul id="consumableSettingsStoresList" class="settings-list"></ul>
+        <button type="button" id="addConsumableSettingsStore" class="settings-add-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span>Añadir comercio</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" id="closeConsumableSettingsModal" class="secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Nuevo ingrediente -->
 <div id="newIngredientModal" class="modal modal--form hidden" aria-hidden="true">
