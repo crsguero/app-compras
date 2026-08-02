@@ -5250,6 +5250,144 @@ document.getElementById('lista2ShopModeBtn')?.addEventListener('click', () => {
 
 document.getElementById('closeLista2ShopView')?.addEventListener('click', closeLista2ShopView);
 
+// ── Filtro por comercio (solo en listas mensuales) ──
+// Comercios seleccionados; vacío = se muestran todos.
+let _lista2StoreFilter = new Set();
+
+const lista2FilterWrapper = document.getElementById('lista2FilterWrapper');
+const lista2FilterDropdown = document.getElementById('lista2FilterDropdown');
+
+function lista2StoreKeyOf(item, name) {
+  return findLista2Record(item, name)?.store || '';
+}
+
+// Nombres visibles según el filtro activo.
+function lista2FilteredNames(item, names) {
+  if (!isLista2Mensual(item) || _lista2StoreFilter.size === 0) return names;
+  return names.filter((name) => _lista2StoreFilter.has(lista2StoreKeyOf(item, name)));
+}
+
+// Pendientes por comercio, con el mismo criterio que el contador de la
+// cabecera: cuenta lo no marcado, ignorando lo que tenga cantidad 0 (que se
+// marca solo al ponerla).
+function lista2PendingByStore(item) {
+  const shopQty = lista2ShopQty[item.id] || {};
+  const checked = lista2Checked[item.id] || {};
+  const counts = new Map();
+
+  item.ingredientNames.forEach((name) => {
+    const key = lista2StoreKeyOf(item, name);
+    if (!counts.has(key)) counts.set(key, 0);
+    if (shopQty[name] === 0 || checked[name]) return;
+    counts.set(key, counts.get(key) + 1);
+  });
+
+  return counts;
+}
+
+function updateLista2FilterBadge() {
+  const btn = document.getElementById('lista2FilterBtn');
+  const badge = document.getElementById('lista2FilterBadge');
+  if (!btn || !badge) return;
+  const count = _lista2StoreFilter.size;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.remove('hidden');
+    btn.classList.add('is-active');
+  } else {
+    badge.classList.add('hidden');
+    btn.classList.remove('is-active');
+  }
+}
+
+function renderLista2FilterPanel(item) {
+  const container = document.getElementById('lista2FilterContent');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const counts = lista2PendingByStore(item);
+  const order = settingsOrder('consumable-store');
+  const rank = (key) => {
+    if (!key) return 1000;
+    const i = order.indexOf(key);
+    return i === -1 ? 999 : i;
+  };
+
+  const section = document.createElement('div');
+  section.className = 'filter-section';
+
+  const title = document.createElement('div');
+  title.className = 'filter-section-title';
+  title.textContent = 'Comercio';
+  section.appendChild(title);
+
+  [...counts.keys()].sort((a, b) => rank(a) - rank(b)).forEach((key) => {
+    const opt = document.createElement('label');
+    opt.className = 'filter-option';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = _lista2StoreFilter.has(key);
+    cb.addEventListener('change', () => {
+      if (cb.checked) _lista2StoreFilter.add(key);
+      else _lista2StoreFilter.delete(key);
+      updateLista2FilterBadge();
+      renderLista2DetailList(item);
+    });
+
+    const label = document.createElement('span');
+    label.className = 'filter-option-label';
+    label.textContent = key
+      ? settingsLabel('consumable-store', key)
+      : 'Sin comercio';
+
+    const pending = counts.get(key);
+    const countEl = document.createElement('span');
+    countEl.className = 'filter-option-count' + (pending > 0 ? ' is-pending' : '');
+    countEl.textContent = pending;
+    countEl.setAttribute('aria-label', `${pending} sin completar`);
+
+    opt.appendChild(cb);
+    opt.appendChild(label);
+    opt.appendChild(countEl);
+    section.appendChild(opt);
+  });
+
+  container.appendChild(section);
+}
+
+document.getElementById('lista2FilterBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (lista2ActionsDropdown) lista2ActionsDropdown.hidden = true;
+  if (!lista2FilterDropdown) return;
+  const item = lista2Items.find((i) => i.id === currentLista2ItemId);
+  if (!item) return;
+  if (lista2FilterDropdown.classList.contains('hidden')) {
+    renderLista2FilterPanel(item);
+    lista2FilterDropdown.classList.remove('hidden');
+  } else {
+    lista2FilterDropdown.classList.add('hidden');
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (lista2FilterDropdown
+    && !lista2FilterDropdown.classList.contains('hidden')
+    && !lista2FilterDropdown.contains(e.target)) {
+    lista2FilterDropdown.classList.add('hidden');
+  }
+});
+
+document.getElementById('clearLista2Filters')?.addEventListener('click', () => {
+  _lista2StoreFilter.clear();
+  updateLista2FilterBadge();
+  const item = lista2Items.find((i) => i.id === currentLista2ItemId);
+  if (item) {
+    renderLista2FilterPanel(item);
+    renderLista2DetailList(item);
+  }
+});
+
 const LISTA2_LOCATION_ORDER = [
   ...Object.keys(LOCATION_LABELS),
   'sin-ubicacion',
@@ -5472,7 +5610,17 @@ function renderLista2DetailList(item) {
   } else {
     const checked = lista2Checked[item.id] || {};
 
-    const allSorted = [...item.ingredientNames].sort((a, b) =>
+    const visibleNames = lista2FilteredNames(item, item.ingredientNames);
+
+    if (visibleNames.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'lista2-empty';
+      p.textContent = 'No hay elementos con los filtros aplicados.';
+      lista2DetailList.appendChild(p);
+      return;
+    }
+
+    const allSorted = [...visibleNames].sort((a, b) =>
       a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
     const shopQty = lista2ShopQty[item.id] || {};
@@ -5744,6 +5892,13 @@ function openLista2Detail(item) {
   if (shopBtn) shopBtn.classList.remove('is-active');
 
   closeLista2Sheet();
+
+  // El filtro por comercio solo tiene sentido en una lista mensual, que es la
+  // única que mezcla comercios. Se reinicia en cada apertura.
+  _lista2StoreFilter.clear();
+  updateLista2FilterBadge();
+  lista2FilterDropdown?.classList.add('hidden');
+  if (lista2FilterWrapper) lista2FilterWrapper.hidden = !isLista2Mensual(item);
 
   if (lista2DetailTitle) {
     lista2DetailTitle.textContent = isLista2Mensual(item)
