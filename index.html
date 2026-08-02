@@ -262,19 +262,29 @@
       <h2>Nueva lista</h2>
     </div>
     <form id="lista2Form">
-      <div class="date-picker" id="lista2StartWrapper">
-        <label for="lista2Start">Desde</label>
-        <input type="date" id="lista2Start" required />
-      </div>
-      <div class="date-picker" id="lista2EndWrapper">
-        <label for="lista2End">Hasta</label>
-        <input type="date" id="lista2End" required />
-      </div>
       <div class="select-field">
-        <label for="lista2StoreSelect">Comercio</label>
-        <select id="lista2StoreSelect" required>
-          <option value="">Selecciona un comercio...</option>
+        <label for="lista2TypeSelect">Tipo de compra</label>
+        <select id="lista2TypeSelect" required>
+          <option value="">Selecciona un tipo...</option>
+          <option value="mensual">Mensual</option>
+          <option value="semanal">Semanal</option>
         </select>
+      </div>
+      <div id="lista2WeeklyFields" class="hidden">
+        <div class="date-picker" id="lista2StartWrapper">
+          <label for="lista2Start">Desde</label>
+          <input type="date" id="lista2Start" />
+        </div>
+        <div class="date-picker" id="lista2EndWrapper">
+          <label for="lista2End">Hasta</label>
+          <input type="date" id="lista2End" />
+        </div>
+        <div class="select-field">
+          <label for="lista2StoreSelect">Comercio</label>
+          <select id="lista2StoreSelect">
+            <option value="">Selecciona un comercio...</option>
+          </select>
+        </div>
       </div>
       <div class="modal-actions">
         <button type="button" id="closeLista2Modal" class="secondary">Cancelar</button>

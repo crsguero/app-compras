@@ -4737,6 +4737,34 @@ const lista2Form = document.getElementById('lista2Form');
 const lista2Start = document.getElementById('lista2Start');
 const lista2End = document.getElementById('lista2End');
 const lista2StoreSelect = document.getElementById('lista2StoreSelect');
+const lista2TypeSelect = document.getElementById('lista2TypeSelect');
+const lista2WeeklyFields = document.getElementById('lista2WeeklyFields');
+
+// Las listas creadas antes de existir el tipo son todas semanales: tienen
+// comercio y rango de fechas, así que la ausencia de `type` se lee como
+// 'semanal' sin tocar el registro guardado.
+function isLista2Mensual(item) {
+  return item.type === 'mensual';
+}
+
+const LISTA2_MENSUAL_TITLE = 'Compra mensual';
+
+// En una lista mensual los nombres vienen de Consumibles, no de Ingredientes.
+function findLista2Record(item, name) {
+  if (isLista2Mensual(item)) return consumables.find((c) => c.name === name) || null;
+  return ingredients.find((i) => i.name === name) || null;
+}
+
+// Los campos del bloque semanal solo son obligatorios cuando ese bloque se ve:
+// si siguieran siendo `required` estando ocultos, el navegador bloquearía el
+// envío del formulario mensual sin poder señalar dónde está el error.
+function syncLista2TypeFields() {
+  const isWeekly = lista2TypeSelect?.value === 'semanal';
+  lista2WeeklyFields?.classList.toggle('hidden', !isWeekly);
+  [lista2Start, lista2End, lista2StoreSelect].forEach((el) => {
+    if (el) el.required = isWeekly;
+  });
+}
 const lista2ListView = document.getElementById('lista2ListView');
 const lista2DetailView = document.getElementById('lista2DetailView');
 const lista2DetailTitle = document.getElementById('lista2DetailTitle');
@@ -4818,7 +4846,11 @@ function syncLista2DateWrapper(input) {
 if (lista2Start) lista2Start.addEventListener('change', () => syncLista2DateWrapper(lista2Start));
 if (lista2End) lista2End.addEventListener('change', () => syncLista2DateWrapper(lista2End));
 
+lista2TypeSelect?.addEventListener('change', syncLista2TypeFields);
+
 function openLista2ModalHandler() {
+  if (lista2TypeSelect) lista2TypeSelect.value = '';
+  syncLista2TypeFields();
   if (lista2StoreSelect) {
     lista2StoreSelect.innerHTML = '<option value="">Selecciona un comercio...</option>';
     Object.entries(STORE_LABELS).forEach(([key, label]) => {
@@ -4842,6 +4874,31 @@ document.getElementById('backToLista2')?.addEventListener('click', hideLista2Det
 
 lista2Form?.addEventListener('submit', (e) => {
   e.preventDefault();
+
+  const type = lista2TypeSelect?.value;
+  if (!type) return;
+
+  if (type === 'mensual') {
+    // Todos los consumibles activos, de cualquier comercio, juntos.
+    const ingredientNames = consumables
+      .filter((c) => c.active !== false)
+      .map((c) => c.name)
+      .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    lista2Items.push({
+      id: Date.now(),
+      type: 'mensual',
+      ingredientNames,
+    });
+
+    saveLista2Items();
+    closeModal(lista2Modal);
+    lista2Form.reset();
+    syncLista2TypeFields();
+    [lista2Start, lista2End].forEach(input => syncLista2DateWrapper(input));
+    renderLista2();
+    return;
+  }
 
   const start = lista2Start?.value;
   const end = lista2End?.value;
@@ -4871,6 +4928,7 @@ lista2Form?.addEventListener('submit', (e) => {
 
   lista2Items.push({
     id: Date.now(),
+    type: 'semanal',
     storeKey,
     startDate: start,
     endDate: end,
@@ -4880,6 +4938,7 @@ lista2Form?.addEventListener('submit', (e) => {
   saveLista2Items();
   closeModal(lista2Modal);
   lista2Form.reset();
+  syncLista2TypeFields();
   [lista2Start, lista2End].forEach(input => syncLista2DateWrapper(input));
   renderLista2();
 });
@@ -5289,21 +5348,29 @@ function renderLista2DetailList(item) {
 
   if (item.ingredientNames.length === 0) {
     const p = document.createElement('p');
-    p.textContent = 'No hay ingredientes planificados en este periodo.';
+    p.textContent = isLista2Mensual(item)
+      ? 'No hay consumibles activos.'
+      : 'No hay ingredientes planificados en este periodo.';
     lista2DetailList.appendChild(p);
     return;
   }
 
-  const totalQtyByIngredient = buildTotalQtyMap(item);
+  // El mapa de cantidades sale del calendario y del rango de fechas: en una
+  // lista mensual no hay ni una cosa ni la otra.
+  const totalQtyByIngredient = isLista2Mensual(item) ? new Map() : buildTotalQtyMap(item);
 
   if (lista2ShopMode) {
     const shopQty = lista2ShopQty[item.id] || {};
 
+    const locationOrder = isLista2Mensual(item)
+      ? [...settingsOrder('consumable-location'), 'sin-ubicacion']
+      : LISTA2_LOCATION_ORDER;
+
+    const locationKeyOf = (name) => findLista2Record(item, name)?.location || 'sin-ubicacion';
+
     const sorted = [...item.ingredientNames].sort((a, b) => {
-      const ingA = ingredients.find((i) => i.name === a);
-      const ingB = ingredients.find((i) => i.name === b);
-      const iA = LISTA2_LOCATION_ORDER.indexOf(ingA?.location || '');
-      const iB = LISTA2_LOCATION_ORDER.indexOf(ingB?.location || '');
+      const iA = locationOrder.indexOf(locationKeyOf(a));
+      const iB = locationOrder.indexOf(locationKeyOf(b));
       const oA = iA === -1 ? 999 : iA;
       const oB = iB === -1 ? 999 : iB;
       if (oA !== oB) return oA - oB;
@@ -5312,14 +5379,20 @@ function renderLista2DetailList(item) {
 
     let currentLocationKey = null;
     sorted.forEach((name) => {
-      const ingredient = ingredients.find((i) => i.name === name);
-      const locationKey = ingredient?.location || 'sin-ubicacion';
+      const ingredient = findLista2Record(item, name);
+      const locationKey = locationKeyOf(name);
 
       if (locationKey !== currentLocationKey) {
         currentLocationKey = locationKey;
         const locationHeader = document.createElement('li');
         locationHeader.className = 'lista2-shop-location-header';
-        locationHeader.textContent = LOCATION_LABELS[locationKey] || 'Sin ubicación';
+        if (locationKey === 'sin-ubicacion') {
+          locationHeader.textContent = 'Sin ubicación';
+        } else {
+          locationHeader.textContent = isLista2Mensual(item)
+            ? settingsLabel('consumable-location', locationKey)
+            : (LOCATION_LABELS[locationKey] || 'Sin ubicación');
+        }
         lista2DetailList.appendChild(locationHeader);
       }
 
@@ -5337,10 +5410,18 @@ function renderLista2DetailList(item) {
       nameGroup.appendChild(nameEl);
 
       if (ingredient) {
-        const totalQty = totalQtyByIngredient.get(name);
-        const isPantry = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
-        const prefix = isPantry ? 'Mínima' : 'Planificada';
-        const qtyText = isPantry ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
+        let prefix, qtyText;
+        if (isLista2Mensual(item)) {
+          // Un consumible no tiene unidad de receta ni cantidad planificada:
+          // lo único que aporta es su cantidad mínima.
+          prefix = 'Mínima';
+          qtyText = ingredient.minQuantity || '';
+        } else {
+          const totalQty = totalQtyByIngredient.get(name);
+          const isPantry = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
+          prefix = isPantry ? 'Mínima' : 'Planificada';
+          qtyText = isPantry ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
+        }
 
         const byline = document.createElement('span');
         byline.className = 'lista2-ingredient-qty';
@@ -5400,7 +5481,7 @@ function renderLista2DetailList(item) {
     const checkedNonZeroNames = allSorted.filter(name => !!checked[name] && shopQty[name] !== 0);
 
     const createNormalItemLi = (name, isPantry = false) => {
-      const ingredient = ingredients.find((i) => i.name === name);
+      const ingredient = findLista2Record(item, name);
       const li = document.createElement('li');
       li.dataset.name = name;
       li.className = 'lista2-ingredient-item';
@@ -5449,11 +5530,12 @@ function renderLista2DetailList(item) {
       }
 
       if (ingredient) {
-        const totalQty = totalQtyByIngredient.get(name);
         const shopOverride = (lista2ShopQty[item.id] || {})[name];
         const isOverridden = shopOverride != null;
         let qtyText;
-        if (isOverridden) {
+        if (isLista2Mensual(item)) {
+          qtyText = isOverridden ? String(shopOverride) : (ingredient.minQuantity || '');
+        } else if (isOverridden) {
           const formato = parseFloat(ingredient.formato);
           const hasConversion = ingredient.productUnit && ingredient.formato != null && ingredient.formato !== '' && formato > 0;
           if (hasConversion) {
@@ -5464,6 +5546,7 @@ function renderLista2DetailList(item) {
             qtyText = `${shopOverride} ${ingredient.unit}`;
           }
         } else {
+          const totalQty = totalQtyByIngredient.get(name);
           const isPantryWithMin = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
           qtyText = isPantryWithMin ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
         }
@@ -5527,19 +5610,29 @@ function renderLista2ShopList(item) {
 
   if (item.ingredientNames.length === 0) {
     const p = document.createElement('p');
-    p.textContent = 'No hay ingredientes planificados en este periodo.';
+    p.textContent = isLista2Mensual(item)
+      ? 'No hay consumibles activos.'
+      : 'No hay ingredientes planificados en este periodo.';
     lista2ShopList.appendChild(p);
     return;
   }
 
-  const totalQtyByIngredient = buildTotalQtyMap(item);
+  // El mapa de cantidades sale del calendario y del rango de fechas: en una
+  // lista mensual no hay ni una cosa ni la otra.
+  const totalQtyByIngredient = isLista2Mensual(item) ? new Map() : buildTotalQtyMap(item);
   const shopQty = lista2ShopQty[item.id] || {};
 
+  // Una lista mensual se agrupa por las ubicaciones de Consumibles, en el
+  // orden configurado en los ajustes de esa pestaña.
+  const locationOrder = isLista2Mensual(item)
+    ? [...settingsOrder('consumable-location'), 'sin-ubicacion']
+    : LISTA2_LOCATION_ORDER;
+
+  const locationKeyOf = (name) => findLista2Record(item, name)?.location || 'sin-ubicacion';
+
   const sorted = [...item.ingredientNames].sort((a, b) => {
-    const ingA = ingredients.find((i) => i.name === a);
-    const ingB = ingredients.find((i) => i.name === b);
-    const iA = LISTA2_LOCATION_ORDER.indexOf(ingA?.location || '');
-    const iB = LISTA2_LOCATION_ORDER.indexOf(ingB?.location || '');
+    const iA = locationOrder.indexOf(locationKeyOf(a));
+    const iB = locationOrder.indexOf(locationKeyOf(b));
     const oA = iA === -1 ? 999 : iA;
     const oB = iB === -1 ? 999 : iB;
     if (oA !== oB) return oA - oB;
@@ -5548,14 +5641,20 @@ function renderLista2ShopList(item) {
 
   let currentLocationKey = null;
   sorted.forEach((name) => {
-    const ingredient = ingredients.find((i) => i.name === name);
-    const locationKey = ingredient?.location || 'sin-ubicacion';
+    const ingredient = findLista2Record(item, name);
+    const locationKey = locationKeyOf(name);
 
     if (locationKey !== currentLocationKey) {
       currentLocationKey = locationKey;
       const locationHeader = document.createElement('li');
       locationHeader.className = 'lista2-shop-location-header';
-      locationHeader.textContent = LOCATION_LABELS[locationKey] || 'Sin ubicación';
+      if (locationKey === 'sin-ubicacion') {
+        locationHeader.textContent = 'Sin ubicación';
+      } else {
+        locationHeader.textContent = isLista2Mensual(item)
+          ? settingsLabel('consumable-location', locationKey)
+          : (LOCATION_LABELS[locationKey] || 'Sin ubicación');
+      }
       lista2ShopList.appendChild(locationHeader);
     }
 
@@ -5572,10 +5671,16 @@ function renderLista2ShopList(item) {
     nameGroup.appendChild(nameEl);
 
     if (ingredient) {
-      const totalQty = totalQtyByIngredient.get(name);
-      const isPantry = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
-      const prefix = isPantry ? 'Mínima' : 'Planificada';
-      const qtyText = isPantry ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
+      let prefix, qtyText;
+      if (isLista2Mensual(item)) {
+        prefix = 'Mínima';
+        qtyText = ingredient.minQuantity || '';
+      } else {
+        const totalQty = totalQtyByIngredient.get(name);
+        const isPantry = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
+        prefix = isPantry ? 'Mínima' : 'Planificada';
+        qtyText = isPantry ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
+      }
       const byline = document.createElement('span');
       byline.className = 'lista2-ingredient-qty';
       if (qtyText) byline.textContent = `${prefix}: ${qtyText}`;
@@ -5640,8 +5745,16 @@ function openLista2Detail(item) {
 
   closeLista2Sheet();
 
-  if (lista2DetailTitle) lista2DetailTitle.textContent = STORE_LABELS[item.storeKey] || item.storeKey;
-  if (lista2DetailMeta) lista2DetailMeta.textContent = `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
+  if (lista2DetailTitle) {
+    lista2DetailTitle.textContent = isLista2Mensual(item)
+      ? LISTA2_MENSUAL_TITLE
+      : (STORE_LABELS[item.storeKey] || item.storeKey);
+  }
+  if (lista2DetailMeta) {
+    lista2DetailMeta.textContent = isLista2Mensual(item)
+      ? ''
+      : `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
+  }
   updateLista2Progress(item);
 
   renderLista2DetailList(item);
@@ -5667,8 +5780,13 @@ function renderLista2() {
     const row = document.createElement('div');
     row.className = 'store-row';
 
-    const storeName = STORE_LABELS[item.storeKey] || item.storeKey;
-    const dateRange = `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
+    const isMensual = isLista2Mensual(item);
+    const storeName = isMensual
+      ? LISTA2_MENSUAL_TITLE
+      : (STORE_LABELS[item.storeKey] || item.storeKey);
+    const dateRange = isMensual
+      ? ''
+      : `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
     const shopQtyRow = lista2ShopQty[item.id] || {};
     const nonPantryNames = item.ingredientNames.filter(name => shopQtyRow[name] !== 0);
     const totalIngredients = nonPantryNames.length;
@@ -5677,7 +5795,7 @@ function renderLista2() {
     row.innerHTML = `
       <div class="store-row-left">
         <div class="store-row-name">${storeName}</div>
-        <div class="store-row-meta">${dateRange}</div>
+        ${dateRange ? `<div class="store-row-meta">${dateRange}</div>` : ''}
       </div>
       <span class="lista2-progress">${checkedIngredients}/${totalIngredients}</span>
       <span class="recipe-row-icon" aria-hidden="true">
