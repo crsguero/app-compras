@@ -1439,6 +1439,7 @@ if (newConsumableForm) {
       location: newConsumableLocationSelect?.value || null,
       store: store || null,
       product: newConsumableProductInput?.value.trim() || null,
+      active: true,
     });
 
     saveConsumables();
@@ -1515,6 +1516,7 @@ function renderConsumablesTable(raw) {
     { key: 'location',    label: 'Ubicación',       sortable: true  },
     { key: 'store',       label: 'Comercio',        sortable: true  },
     { key: 'product',     label: 'Producto',        sortable: false },
+    { key: 'active',      label: 'Activo',          sortable: false },
   ];
 
   const thead = document.createElement('thead');
@@ -1569,8 +1571,32 @@ function renderConsumablesTable(raw) {
     productTd.textContent = consumable.product || '';
     tr.appendChild(productTd);
 
+    // Los consumibles creados antes de existir este campo no tienen `active`:
+    // se consideran activos, sin tocar el registro guardado.
+    const isActive = consumable.active !== false;
+    tr.classList.toggle('is-inactive', !isActive);
+
+    const activeTd = document.createElement('td');
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'row-switch';
+    switchLabel.setAttribute('aria-label', `Activar ${consumable.name}`);
+    const switchInput = document.createElement('input');
+    switchInput.type = 'checkbox';
+    switchInput.checked = isActive;
+    switchInput.addEventListener('change', () => {
+      toggleConsumableActive(consumable.id, switchInput.checked);
+    });
+    const switchTrack = document.createElement('span');
+    switchTrack.className = 'row-switch-track';
+    switchLabel.appendChild(switchInput);
+    switchLabel.appendChild(switchTrack);
+    activeTd.appendChild(switchLabel);
+    tr.appendChild(activeTd);
+
     tr.style.cursor = 'pointer';
-    tr.addEventListener('click', () => {
+    tr.addEventListener('click', (e) => {
+      // El toggle no debe abrir el panel de edición.
+      if (e.target.closest('.row-switch')) return;
       document.querySelectorAll('#consumableList .ingredient-table tr.is-selected')
         .forEach((r) => r.classList.remove('is-selected'));
       tr.classList.add('is-selected');
@@ -1664,6 +1690,7 @@ if (consumableForm) {
         location: consumableLocationSelect?.value || null,
         store: store || null,
         product: consumableProductInput?.value.trim() || null,
+        active: true,
       });
     }
 
@@ -1711,6 +1738,14 @@ function autoSaveConsumable() {
 ].forEach((el) => {
   if (el) el.addEventListener('change', autoSaveConsumable);
 });
+
+function toggleConsumableActive(id, active) {
+  const consumable = consumables.find((c) => c.id === id);
+  if (!consumable) return;
+  consumable.active = active;
+  saveConsumables();
+  renderConsumables();
+}
 
 function deleteConsumable(id) {
   consumables = consumables.filter((c) => c.id !== id);
