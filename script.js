@@ -50,7 +50,12 @@ let calendarEntries = safeLoad('calendarEntries', []);
 let calendarCooked   = safeLoad('calendarCooked',  {});
 let purchasedItems = safeLoad('purchasedItems', {});
 let lastShoppingList = safeLoad('lastShoppingList', null);
-let lista2Items = safeLoad('lista2Items', []);
+// Firebase guarda los arrays vacíos como null, así que una lista sin
+// elementos puede volver sin `ingredientNames`. Se normaliza al cargar —igual
+// que hace el listener— porque un fallo aquí tumbaría el arranque entero.
+const _rawLista2Items = safeLoad('lista2Items', []);
+let lista2Items = (Array.isArray(_rawLista2Items) ? _rawLista2Items : [])
+  .map((item) => ({ ...item, ingredientNames: item.ingredientNames || [] }));
 let lista2Checked = safeLoad('lista2Checked', {});
 let lista2ShopQty = safeLoad('lista2ShopQty', {});
 let lista2ShopMode = false;
@@ -4736,7 +4741,6 @@ const lista2Modal = document.getElementById('lista2Modal');
 const lista2Form = document.getElementById('lista2Form');
 const lista2Start = document.getElementById('lista2Start');
 const lista2End = document.getElementById('lista2End');
-const lista2StoreSelect = document.getElementById('lista2StoreSelect');
 const lista2TypeSelect = document.getElementById('lista2TypeSelect');
 const lista2WeeklyFields = document.getElementById('lista2WeeklyFields');
 
@@ -4748,6 +4752,24 @@ function isLista2Mensual(item) {
 }
 
 const LISTA2_MENSUAL_TITLE = 'Compra mensual';
+const LISTA2_SEMANAL_TITLE = 'Compra semanal';
+
+// Título de una lista. Las semanales creadas cuando se elegía comercio
+// conservan su `storeKey` y siguen mostrándose con el nombre del comercio.
+function lista2Title(item) {
+  if (isLista2Mensual(item)) return LISTA2_MENSUAL_TITLE;
+  if (item.storeKey) return STORE_LABELS[item.storeKey] || item.storeKey;
+  return LISTA2_SEMANAL_TITLE;
+}
+
+// Fecha de creación de una lista. Las creadas antes de existir `createdAt` no
+// lo tienen, pero su id es el `Date.now()` del momento en que se crearon, así
+// que sirve de respaldo sin necesidad de migrar nada.
+function lista2CreatedAtISO(item) {
+  const ts = item.createdAt ?? item.id;
+  if (!ts) return '';
+  return toISODateString(new Date(ts));
+}
 
 // En una lista mensual los nombres vienen de Consumibles, no de Ingredientes.
 function findLista2Record(item, name) {
@@ -4761,7 +4783,7 @@ function findLista2Record(item, name) {
 function syncLista2TypeFields() {
   const isWeekly = lista2TypeSelect?.value === 'semanal';
   lista2WeeklyFields?.classList.toggle('hidden', !isWeekly);
-  [lista2Start, lista2End, lista2StoreSelect].forEach((el) => {
+  [lista2Start, lista2End].forEach((el) => {
     if (el) el.required = isWeekly;
   });
 }
@@ -4784,8 +4806,11 @@ function showLista2Detail() {
 function hideLista2Detail() {
   closeLista2Sheet();
   closeLista2ShopView();
+  currentLista2StoreKey = null;
+  if (lista2DetailHeaderActions) lista2DetailHeaderActions.hidden = false;
   lista2DetailView?.classList.remove('is-visible');
   lista2ListView?.classList.remove('hidden');
+  renderLista2();
 }
 
 function openLista2ShopView(item) {
@@ -4851,15 +4876,6 @@ lista2TypeSelect?.addEventListener('change', syncLista2TypeFields);
 function openLista2ModalHandler() {
   if (lista2TypeSelect) lista2TypeSelect.value = '';
   syncLista2TypeFields();
-  if (lista2StoreSelect) {
-    lista2StoreSelect.innerHTML = '<option value="">Selecciona un comercio...</option>';
-    Object.entries(STORE_LABELS).forEach(([key, label]) => {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = label;
-      lista2StoreSelect.appendChild(opt);
-    });
-  }
   openModal(lista2Modal);
 }
 
@@ -4888,6 +4904,7 @@ lista2Form?.addEventListener('submit', (e) => {
     lista2Items.push({
       id: Date.now(),
       type: 'mensual',
+      createdAt: Date.now(),
       ingredientNames,
     });
 
@@ -4902,9 +4919,8 @@ lista2Form?.addEventListener('submit', (e) => {
 
   const start = lista2Start?.value;
   const end = lista2End?.value;
-  const storeKey = lista2StoreSelect?.value;
 
-  if (!start || !end || !storeKey) return;
+  if (!start || !end) return;
 
   const entries = getExpandedCalendarEntriesInRange(start, end);
 
@@ -4915,21 +4931,21 @@ lista2Form?.addEventListener('submit', (e) => {
     recipe.ingredients.forEach(({ ingredientId }) => ingredientIdSet.add(ingredientId));
   });
 
-  // Añadir siempre los básicos de despensa del comercio seleccionado
+  // Añadir siempre los básicos de despensa, sea cual sea su comercio
   ingredients.forEach((ing) => {
-    if (ing.pantry && ing.store === storeKey) ingredientIdSet.add(ing.id);
+    if (ing.pantry) ingredientIdSet.add(ing.id);
   });
 
   const ingredientNames = [...ingredientIdSet]
     .map((id) => ingredients.find((i) => i.id === id))
-    .filter((ing) => ing && ing.store === storeKey && ing.shoppingType === 'semanal')
+    .filter((ing) => ing && ing.shoppingType === 'semanal')
     .map((ing) => ing.name)
     .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
   lista2Items.push({
     id: Date.now(),
     type: 'semanal',
-    storeKey,
+    createdAt: Date.now(),
     startDate: start,
     endDate: end,
     ingredientNames,
@@ -5250,143 +5266,37 @@ document.getElementById('lista2ShopModeBtn')?.addEventListener('click', () => {
 
 document.getElementById('closeLista2ShopView')?.addEventListener('click', closeLista2ShopView);
 
-// ── Filtro por comercio (solo en listas mensuales) ──
-// Comercios seleccionados; vacío = se muestran todos.
-let _lista2StoreFilter = new Set();
+// Texto de cantidad de una fila, compartido por la vista por tipo y la vista
+// por comercio. Un consumible no tiene unidad ni conversión: solo su cantidad
+// mínima, o la cantidad que se le haya puesto a mano.
+function lista2QtyText(item, record, name, totalQty) {
+  const shopOverride = (lista2ShopQty[item.id] || {})[name];
+  const isOverridden = shopOverride != null;
+  let text;
 
-const lista2FilterWrapper = document.getElementById('lista2FilterWrapper');
-const lista2FilterDropdown = document.getElementById('lista2FilterDropdown');
+  if (isLista2Mensual(item)) {
+    text = isOverridden ? String(shopOverride) : (record.minQuantity || '');
+  } else if (isOverridden) {
+    const formato = parseFloat(record.formato);
+    const hasConversion = record.productUnit && record.formato != null && record.formato !== '' && formato > 0;
+    if (hasConversion) {
+      const labels = PRODUCT_UNIT_LABELS[record.productUnit];
+      const unitLabel = labels ? (shopOverride === 1 ? labels.singular : labels.plural) : record.productUnit;
+      text = `${shopOverride} ${unitLabel}`;
+    } else {
+      text = `${shopOverride} ${record.unit}`;
+    }
+  } else {
+    const isPantryWithMin = record.pantry && record.minQuantity != null && record.minQuantity !== '';
+    text = isPantryWithMin ? formatMinQty(record) : formatIngredientQty(record, totalQty);
+  }
+
+  return { text, isOverridden };
+}
 
 function lista2StoreKeyOf(item, name) {
   return findLista2Record(item, name)?.store || '';
 }
-
-// Nombres visibles según el filtro activo.
-function lista2FilteredNames(item, names) {
-  if (!isLista2Mensual(item) || _lista2StoreFilter.size === 0) return names;
-  return names.filter((name) => _lista2StoreFilter.has(lista2StoreKeyOf(item, name)));
-}
-
-// Pendientes por comercio, con el mismo criterio que el contador de la
-// cabecera: cuenta lo no marcado, ignorando lo que tenga cantidad 0 (que se
-// marca solo al ponerla).
-function lista2PendingByStore(item) {
-  const shopQty = lista2ShopQty[item.id] || {};
-  const checked = lista2Checked[item.id] || {};
-  const counts = new Map();
-
-  item.ingredientNames.forEach((name) => {
-    const key = lista2StoreKeyOf(item, name);
-    if (!counts.has(key)) counts.set(key, 0);
-    if (shopQty[name] === 0 || checked[name]) return;
-    counts.set(key, counts.get(key) + 1);
-  });
-
-  return counts;
-}
-
-function updateLista2FilterBadge() {
-  const btn = document.getElementById('lista2FilterBtn');
-  const badge = document.getElementById('lista2FilterBadge');
-  if (!btn || !badge) return;
-  const count = _lista2StoreFilter.size;
-  if (count > 0) {
-    badge.textContent = count;
-    badge.classList.remove('hidden');
-    btn.classList.add('is-active');
-  } else {
-    badge.classList.add('hidden');
-    btn.classList.remove('is-active');
-  }
-}
-
-function renderLista2FilterPanel(item) {
-  const container = document.getElementById('lista2FilterContent');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const counts = lista2PendingByStore(item);
-  const order = settingsOrder('consumable-store');
-  const rank = (key) => {
-    if (!key) return 1000;
-    const i = order.indexOf(key);
-    return i === -1 ? 999 : i;
-  };
-
-  const section = document.createElement('div');
-  section.className = 'filter-section';
-
-  const title = document.createElement('div');
-  title.className = 'filter-section-title';
-  title.textContent = 'Comercio';
-  section.appendChild(title);
-
-  [...counts.keys()].sort((a, b) => rank(a) - rank(b)).forEach((key) => {
-    const opt = document.createElement('label');
-    opt.className = 'filter-option';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = _lista2StoreFilter.has(key);
-    cb.addEventListener('change', () => {
-      if (cb.checked) _lista2StoreFilter.add(key);
-      else _lista2StoreFilter.delete(key);
-      updateLista2FilterBadge();
-      renderLista2DetailList(item);
-    });
-
-    const label = document.createElement('span');
-    label.className = 'filter-option-label';
-    label.textContent = key
-      ? settingsLabel('consumable-store', key)
-      : 'Sin comercio';
-
-    const pending = counts.get(key);
-    const countEl = document.createElement('span');
-    countEl.className = 'filter-option-count' + (pending > 0 ? ' is-pending' : '');
-    countEl.textContent = pending;
-    countEl.setAttribute('aria-label', `${pending} sin completar`);
-
-    opt.appendChild(cb);
-    opt.appendChild(label);
-    opt.appendChild(countEl);
-    section.appendChild(opt);
-  });
-
-  container.appendChild(section);
-}
-
-document.getElementById('lista2FilterBtn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (lista2ActionsDropdown) lista2ActionsDropdown.hidden = true;
-  if (!lista2FilterDropdown) return;
-  const item = lista2Items.find((i) => i.id === currentLista2ItemId);
-  if (!item) return;
-  if (lista2FilterDropdown.classList.contains('hidden')) {
-    renderLista2FilterPanel(item);
-    lista2FilterDropdown.classList.remove('hidden');
-  } else {
-    lista2FilterDropdown.classList.add('hidden');
-  }
-});
-
-document.addEventListener('click', (e) => {
-  if (lista2FilterDropdown
-    && !lista2FilterDropdown.classList.contains('hidden')
-    && !lista2FilterDropdown.contains(e.target)) {
-    lista2FilterDropdown.classList.add('hidden');
-  }
-});
-
-document.getElementById('clearLista2Filters')?.addEventListener('click', () => {
-  _lista2StoreFilter.clear();
-  updateLista2FilterBadge();
-  const item = lista2Items.find((i) => i.id === currentLista2ItemId);
-  if (item) {
-    renderLista2FilterPanel(item);
-    renderLista2DetailList(item);
-  }
-});
 
 const LISTA2_LOCATION_ORDER = [
   ...Object.keys(LOCATION_LABELS),
@@ -5425,7 +5335,9 @@ function buildTotalQtyMap(item) {
     if (!recipe) return;
     recipe.ingredients.forEach(({ ingredientId, quantity }) => {
       const ing = ingredients.find((i) => i.id === ingredientId);
-      if (!ing || ing.store !== item.storeKey) return;
+      if (!ing) return;
+      // Las listas creadas cuando se elegía comercio siguen ciñéndose a él.
+      if (item.storeKey && ing.store !== item.storeKey) return;
       map.set(ing.name, (map.get(ing.name) || 0) + quantity);
     });
   });
@@ -5610,17 +5522,7 @@ function renderLista2DetailList(item) {
   } else {
     const checked = lista2Checked[item.id] || {};
 
-    const visibleNames = lista2FilteredNames(item, item.ingredientNames);
-
-    if (visibleNames.length === 0) {
-      const p = document.createElement('p');
-      p.className = 'lista2-empty';
-      p.textContent = 'No hay elementos con los filtros aplicados.';
-      lista2DetailList.appendChild(p);
-      return;
-    }
-
-    const allSorted = [...visibleNames].sort((a, b) =>
+    const allSorted = [...item.ingredientNames].sort((a, b) =>
       a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
     const shopQty = lista2ShopQty[item.id] || {};
@@ -5678,26 +5580,8 @@ function renderLista2DetailList(item) {
       }
 
       if (ingredient) {
-        const shopOverride = (lista2ShopQty[item.id] || {})[name];
-        const isOverridden = shopOverride != null;
-        let qtyText;
-        if (isLista2Mensual(item)) {
-          qtyText = isOverridden ? String(shopOverride) : (ingredient.minQuantity || '');
-        } else if (isOverridden) {
-          const formato = parseFloat(ingredient.formato);
-          const hasConversion = ingredient.productUnit && ingredient.formato != null && ingredient.formato !== '' && formato > 0;
-          if (hasConversion) {
-            const labels = PRODUCT_UNIT_LABELS[ingredient.productUnit];
-            const unitLabel = labels ? (shopOverride === 1 ? labels.singular : labels.plural) : ingredient.productUnit;
-            qtyText = `${shopOverride} ${unitLabel}`;
-          } else {
-            qtyText = `${shopOverride} ${ingredient.unit}`;
-          }
-        } else {
-          const totalQty = totalQtyByIngredient.get(name);
-          const isPantryWithMin = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
-          qtyText = isPantryWithMin ? formatMinQty(ingredient) : formatIngredientQty(ingredient, totalQty);
-        }
+        const { text: qtyText, isOverridden } =
+          lista2QtyText(item, ingredient, name, totalQtyByIngredient.get(name));
         if (qtyText) {
           const qtyEl = document.createElement('span');
           qtyEl.className = 'lista2-ingredient-qty';
@@ -5887,27 +5771,20 @@ function updateLista2Progress(item) {
 
 function openLista2Detail(item) {
   currentLista2ItemId = item.id;
+  currentLista2StoreKey = null;
+  if (lista2DetailHeaderActions) lista2DetailHeaderActions.hidden = false;
   lista2ShopMode = false;
   const shopBtn = document.getElementById('lista2ShopModeBtn');
   if (shopBtn) shopBtn.classList.remove('is-active');
 
   closeLista2Sheet();
 
-  // El filtro por comercio solo tiene sentido en una lista mensual, que es la
-  // única que mezcla comercios. Se reinicia en cada apertura.
-  _lista2StoreFilter.clear();
-  updateLista2FilterBadge();
-  lista2FilterDropdown?.classList.add('hidden');
-  if (lista2FilterWrapper) lista2FilterWrapper.hidden = !isLista2Mensual(item);
-
   if (lista2DetailTitle) {
-    lista2DetailTitle.textContent = isLista2Mensual(item)
-      ? LISTA2_MENSUAL_TITLE
-      : (STORE_LABELS[item.storeKey] || item.storeKey);
+    lista2DetailTitle.textContent = lista2Title(item);
   }
   if (lista2DetailMeta) {
     lista2DetailMeta.textContent = isLista2Mensual(item)
-      ? ''
+      ? formatDateShort(lista2CreatedAtISO(item))
       : `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
   }
   updateLista2Progress(item);
@@ -5916,7 +5793,291 @@ function openLista2Detail(item) {
   showLista2Detail();
 }
 
+// ── Vista "Por comercio" ──────────────────────────────────────────────
+// Reagrupa los elementos de todas las listas (mensuales y semanales) por
+// comercio. No crea listas nuevas: cada fila sigue apuntando a la lista de
+// origen, así que marcar un elemento aquí lo marca también en su lista.
+
+let _lista2View = 'type';
+let currentLista2StoreKey = null;
+
+const lista2StoreGroupsContainer = document.getElementById('lista2StoreGroupsContainer');
+const lista2DetailHeaderActions = document.querySelector('.lista2-detail-header-actions');
+
+// Nombre visible de un comercio. La clave puede venir de la lista de comercios
+// de Ingredientes o de la de Consumibles, que se configuran por separado.
+function lista2StoreLabel(key) {
+  if (!key) return 'Sin comercio';
+  const fromIngredients = getSettingsItems('ingredient-store').find((it) => it.value === key);
+  if (fromIngredients) return fromIngredients.name;
+  const fromConsumables = getSettingsItems('consumable-store').find((it) => it.value === key);
+  if (fromConsumables) return fromConsumables.name;
+  return STORE_LABELS[key] || key;
+}
+
+// Orden de los comercios: primero el configurado en Ingredientes, después los
+// que solo existan en Consumibles, y al final los sueltos y el "sin comercio".
+function lista2StoreRank(key) {
+  if (!key) return 3000;
+  const ing = settingsOrder('ingredient-store').indexOf(key);
+  if (ing !== -1) return ing;
+  const cons = settingsOrder('consumable-store').indexOf(key);
+  if (cons !== -1) return 1000 + cons;
+  return 2000;
+}
+
+// Map(comercio -> Map(nombre -> { name, listIds, sourceItem })).
+// Un mismo nombre puede aparecer en varias listas: se muestra una sola vez y
+// se guardan todas sus procedencias para marcarlo en todas a la vez.
+function buildLista2StoreGroups() {
+  const groups = new Map();
+
+  lista2Items.forEach((item) => {
+    item.ingredientNames.forEach((name) => {
+      const key = lista2StoreKeyOf(item, name);
+      if (!groups.has(key)) groups.set(key, new Map());
+      const byName = groups.get(key);
+      if (!byName.has(name)) byName.set(name, { name, listIds: [], sourceItem: item });
+      byName.get(name).listIds.push(item.id);
+    });
+  });
+
+  return groups;
+}
+
+function lista2EntryDone(entry) {
+  return entry.listIds.every((id) => !!(lista2Checked[id] || {})[entry.name]);
+}
+
+// Cantidad 0 significa "no hace falta comprarlo": no cuenta para el progreso,
+// igual que en la vista por tipo.
+function lista2EntrySkipped(entry) {
+  return entry.listIds.every((id) => (lista2ShopQty[id] || {})[entry.name] === 0);
+}
+
+function lista2GroupProgress(byName) {
+  const entries = [...byName.values()].filter((e) => !lista2EntrySkipped(e));
+  return {
+    done: entries.filter(lista2EntryDone).length,
+    total: entries.length,
+  };
+}
+
+function renderLista2StoreGroups() {
+  if (!lista2StoreGroupsContainer) return;
+  lista2StoreGroupsContainer.innerHTML = '';
+
+  const groups = buildLista2StoreGroups();
+
+  // Un comercio sin nada que comprar (todos sus elementos a cantidad 0) se
+  // oculta: no aportaría nada y su contador sería siempre X/0.
+  const visibleKeys = [...groups.keys()]
+    .filter((key) => lista2GroupProgress(groups.get(key)).total > 0)
+    .sort((a, b) => lista2StoreRank(a) - lista2StoreRank(b));
+
+  if (visibleKeys.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'lista2-empty';
+    p.textContent = lista2Items.length === 0
+      ? 'Crea una nueva lista para empezar.'
+      : 'No hay nada que comprar.';
+    lista2StoreGroupsContainer.appendChild(p);
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'store-list';
+
+  visibleKeys
+    .forEach((storeKey) => {
+      const byName = groups.get(storeKey);
+      const { done, total } = lista2GroupProgress(byName);
+
+      const row = document.createElement('div');
+      row.className = 'store-row';
+      row.innerHTML = `
+        <div class="store-row-left">
+          <div class="store-row-name">${lista2StoreLabel(storeKey)}</div>
+        </div>
+        <span class="lista2-progress">${done}/${total}</span>
+        <span class="recipe-row-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      `;
+      row.addEventListener('click', () => openLista2StoreDetail(storeKey));
+      wrapper.appendChild(row);
+    });
+
+  lista2StoreGroupsContainer.appendChild(wrapper);
+}
+
+function openLista2StoreDetail(storeKey) {
+  currentLista2ItemId = null;
+  currentLista2StoreKey = storeKey;
+  closeLista2Sheet();
+
+  // Esta lista es virtual: no se puede eliminar ni editar cantidades.
+  if (lista2DetailHeaderActions) lista2DetailHeaderActions.hidden = true;
+
+  if (lista2DetailTitle) lista2DetailTitle.textContent = lista2StoreLabel(storeKey);
+  if (lista2DetailMeta) lista2DetailMeta.textContent = '';
+
+  renderLista2StoreDetailList(storeKey);
+  showLista2Detail();
+}
+
+function updateLista2StoreProgress(byName) {
+  if (!lista2DetailProgress) return;
+  const { done, total } = lista2GroupProgress(byName);
+  lista2DetailProgress.textContent = `${done}/${total}`;
+}
+
+function renderLista2StoreDetailList(storeKey) {
+  if (!lista2DetailList) return;
+  lista2DetailList.innerHTML = '';
+
+  const byName = buildLista2StoreGroups().get(storeKey);
+
+  // Los elementos con cantidad 0 no hay que comprarlos: no se listan, igual
+  // que tampoco cuentan para el progreso. Un comercio cuyos elementos estén
+  // todos a 0 se queda vacío, en coherencia con su contador X/0.
+  const entries = byName
+    ? [...byName.values()].filter((e) => !lista2EntrySkipped(e))
+    : [];
+
+  if (entries.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'lista2-empty';
+    p.textContent = 'No hay elementos que comprar en este comercio.';
+    lista2DetailList.appendChild(p);
+    updateLista2StoreProgress(byName || new Map());
+    return;
+  }
+
+  // Las cantidades planificadas dependen de la lista de origen; se calculan
+  // una vez por lista y se reutilizan.
+  const qtyMaps = new Map();
+  const qtyMapFor = (item) => {
+    if (!qtyMaps.has(item.id)) {
+      qtyMaps.set(item.id, isLista2Mensual(item) ? new Map() : buildTotalQtyMap(item));
+    }
+    return qtyMaps.get(item.id);
+  };
+
+  const alphabetical = [...entries].sort((a, b) =>
+    a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+  );
+  const pending = alphabetical.filter((e) => !lista2EntryDone(e));
+  const completed = alphabetical.filter((e) => lista2EntryDone(e));
+
+  [...pending, ...completed].forEach((entry) => {
+    const item = entry.sourceItem;
+    const record = findLista2Record(item, entry.name);
+    const isDone = lista2EntryDone(entry);
+
+    const li = document.createElement('li');
+    li.dataset.name = entry.name;
+    li.className = 'lista2-ingredient-item';
+    if (isDone) li.classList.add('is-complete');
+
+    const cbLabel = document.createElement('label');
+    cbLabel.className = 'cb';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'cb-input';
+    checkbox.checked = isDone;
+    const cbBox = document.createElement('span');
+    cbBox.className = 'cb-box';
+    cbBox.setAttribute('aria-hidden', 'true');
+    cbLabel.appendChild(checkbox);
+    cbLabel.appendChild(cbBox);
+
+    // Se marca en todas las listas donde aparezca, para que el estado sea el
+    // mismo se mire desde donde se mire.
+    checkbox.addEventListener('change', () => {
+      entry.listIds.forEach((id) => {
+        if (!lista2Checked[id]) lista2Checked[id] = {};
+        if (checkbox.checked) lista2Checked[id][entry.name] = true;
+        else delete lista2Checked[id][entry.name];
+      });
+      saveLista2Checked();
+      renderLista2StoreDetailList(storeKey);
+    });
+
+    const nameGroup = document.createElement('div');
+    nameGroup.className = 'lista2-name-group';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'shopping-name';
+    nameEl.textContent = entry.name;
+    nameGroup.appendChild(nameEl);
+
+    if (record?.product) {
+      const productEl = document.createElement('span');
+      productEl.className = 'lista2-ingredient-product';
+      productEl.textContent = record.product;
+      nameGroup.appendChild(productEl);
+    }
+
+    li.appendChild(cbLabel);
+    li.appendChild(nameGroup);
+
+    if (record) {
+      const { text, isOverridden } =
+        lista2QtyText(item, record, entry.name, qtyMapFor(item).get(entry.name));
+      if (text) {
+        const qtyEl = document.createElement('span');
+        qtyEl.className = 'lista2-ingredient-qty';
+        qtyEl.textContent = text;
+        if (isOverridden) {
+          const dot = document.createElement('span');
+          dot.className = 'lista2-qty-override-dot';
+          dot.setAttribute('aria-label', 'Cantidad editada manualmente');
+          qtyEl.prepend(dot);
+        }
+        li.appendChild(qtyEl);
+      }
+    }
+
+    lista2DetailList.appendChild(li);
+  });
+
+  updateLista2StoreProgress(byName);
+}
+
+// La pestaña marcada se deduce siempre de _lista2View, no del clic: así
+// siempre hay exactamente una activa, se llegue por donde se llegue.
+function syncLista2ViewTabs() {
+  const tabs = document.querySelectorAll('#lista2ViewTabs .shopping-tab-btn');
+  if (!tabs.length) return;
+
+  // Ante un valor inesperado se vuelve a la vista por tipo, para no dejar
+  // ninguna pestaña marcada.
+  const known = [...tabs].some((b) => b.dataset.lista2View === _lista2View);
+  if (!known) _lista2View = 'type';
+
+  tabs.forEach((b) => b.classList.toggle('active', b.dataset.lista2View === _lista2View));
+}
+
+document.querySelectorAll('#lista2ViewTabs .shopping-tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    _lista2View = btn.dataset.lista2View;
+    renderLista2();
+  });
+});
+
 function renderLista2() {
+  syncLista2ViewTabs();
+
+  // La vista por comercio se alimenta de las mismas listas, así que se
+  // repinta siempre junto con la vista por tipo.
+  renderLista2StoreGroups();
+  const showingByStore = _lista2View === 'store';
+  if (lista2ItemsContainer) lista2ItemsContainer.hidden = showingByStore;
+  if (lista2StoreGroupsContainer) lista2StoreGroupsContainer.hidden = !showingByStore;
+
   if (!lista2ItemsContainer) return;
   lista2ItemsContainer.innerHTML = '';
 
@@ -5936,11 +6097,9 @@ function renderLista2() {
     row.className = 'store-row';
 
     const isMensual = isLista2Mensual(item);
-    const storeName = isMensual
-      ? LISTA2_MENSUAL_TITLE
-      : (STORE_LABELS[item.storeKey] || item.storeKey);
+    const storeName = lista2Title(item);
     const dateRange = isMensual
-      ? ''
+      ? formatDateShort(lista2CreatedAtISO(item))
       : `${formatDateShort(item.startDate)} – ${formatDateShort(item.endDate)}`;
     const shopQtyRow = lista2ShopQty[item.id] || {};
     const nonPantryNames = item.ingredientNames.filter(name => shopQtyRow[name] !== 0);

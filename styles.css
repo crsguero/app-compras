@@ -645,7 +645,6 @@ select:has(option[value=""]:checked) {
     padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
   }
 }
 
@@ -658,7 +657,7 @@ select:has(option[value=""]:checked) {
   line-height: 32px;
   font-weight: 600;
   color: var(--color-primary);
-  margin: 0;
+  margin: 0 0 24px;
 }
 
 #lista2Modal .modal-content form {
@@ -868,6 +867,7 @@ select:has(option[value=""]:checked) {
 
 .shopping-tab-btn {
   flex: 1;
+  box-sizing: border-box;
   padding: 8px 0;
   font-weight: 600;
   color: #717680;
@@ -1079,39 +1079,6 @@ select:has(option[value=""]:checked) {
   gap: 12px;
 }
 
-/* El filtro del detalle vive junto al menú de la cabecera: se le quita el
-   marco de .filter-btn para que ambos iconos pesen lo mismo. */
-.lista2-filter-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
-  color: var(--color-primary);
-}
-
-.lista2-filter-btn:hover {
-  color: var(--color-secondary);
-}
-
-.lista2-filter-btn.is-active {
-  background: none;
-  border: none;
-}
-
-.filter-option-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.filter-option-count {
-  flex: none;
-  font-size: 12px;
-  font-weight: 500;
-  color: #9C9894;
-}
-
-.filter-option-count.is-pending {
-  color: var(--color-primary);
-}
 
 #lista2ActionsMenuBtn {
   display: flex;
@@ -4482,4 +4449,17 @@ label.toggle input[type="checkbox"]:checked::after {
 
 .ingredient-table tbody tr.is-inactive td {
   color: var(--color-secondary);
+}
+
+/* ── Pestaña Listas: vistas "Por tipo" / "Por comercio" ── */
+/* .lista2-detail-header-actions es flex, así que el atributo hidden por sí
+   solo no la oculta: en la vista por comercio la lista es virtual y no tiene
+   acciones que ofrecer. */
+.lista2-detail-header-actions[hidden] {
+  display: none;
+}
+
+/* El espacio bajo las tabs ya lo pone el gap de #lista2ListView. */
+#lista2ViewTabs {
+  margin-bottom: 0;
 }
