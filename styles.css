@@ -727,6 +727,7 @@ select:has(option[value=""]:checked) {
 #newIngredientModal .modal-content,
 #newRecipeModal .modal-content,
 #newConsumableModal .modal-content,
+#appSettingsModal .modal-content,
 #ingredientSettingsModal .modal-content,
 #consumableSettingsModal .modal-content {
   transform: none;
@@ -2547,6 +2548,48 @@ select:has(option[value=""]:checked) {
   font-weight: 400;
 }
 
+.settings-row-handle {
+  flex: none;
+  width: 20px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #D6D4D0;
+  cursor: grab;
+  /* Sin esto el navegador interpreta el gesto como scroll y no llega el
+     pointermove: es lo que hace que el arrastre funcione también en móvil. */
+  touch-action: none;
+}
+
+.settings-row-handle:hover {
+  color: #9C9894;
+}
+
+.settings-row-handle:active {
+  cursor: grabbing;
+}
+
+.settings-row.is-dragging {
+  opacity: 0.7;
+  background: var(--color-quinary);
+  border-radius: 8px;
+}
+
+.settings-row-count {
+  flex: none;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #C7C4BF;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-row-count.is-used {
+  color: #9C9894;
+}
+
+
 .settings-row-actions {
   display: flex;
   align-items: center;
@@ -2572,15 +2615,6 @@ select:has(option[value=""]:checked) {
 
 .settings-row-btn:hover {
   background: #EEEDE9;
-}
-
-.settings-row-btn:disabled {
-  color: #D6D4D0;
-  cursor: default;
-}
-
-.settings-row-btn:disabled:hover {
-  background: none;
 }
 
 .settings-row-btn--delete {
@@ -2664,9 +2698,20 @@ select:has(option[value=""]:checked) {
   border: 1px solid #E8E7E5;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  min-width: 270px;
   z-index: 1000;
   padding: 16px;
+
+  /* Ancho fijo, pero nunca más que la ventana: con min-width se salía por el
+     lado izquierdo en ventanas estrechas. */
+  width: 270px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+
+  /* El panel lista todas las ubicaciones y comercios, así que en ventanas
+     bajas se salía por abajo: se acota y se desplaza dentro de sí mismo. */
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .filter-dropdown.hidden {
@@ -4003,6 +4048,21 @@ label.toggle input[type="checkbox"]:checked::after {
     width: auto;
   }
 
+  /* Ajustes necesita mucho más ancho: nav lateral y listas conviven a la vez. */
+  #appSettingsModal .modal-content {
+    width: 920px;
+    max-width: calc(100vw - 48px);
+  }
+
+  #appSettingsModal .app-settings-nav {
+    width: 180px;
+  }
+
+  #appSettingsModal .app-settings-layout {
+    gap: 32px;
+    min-height: 340px;
+  }
+
   .modal--form .modal-content {
     width: 480px;
     max-width: 440px;
@@ -4372,27 +4432,50 @@ label.toggle input[type="checkbox"]:checked::after {
   background: #3C3A37;
 }
 
-.logout-btn {
+/* Bloque inferior de la barra de navegación: ajustes y cierre de sesión. */
+.tabs-footer {
   margin-top: auto;
-  align-self: center;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0;
-  border-radius: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 24px;
-  font-family: 'Inter', sans-serif;
-  color: var(--color-primary);
-  text-align: left;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
 }
 
-.logout-btn:hover {
-  background: none;
+/* Mismo aspecto que un botón de pestaña, pero sin la clase .tab-btn: esa la
+   recoge el conmutador de pestañas y este botón no abre ninguna sección. */
+.nav-settings-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  margin: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background-color: transparent;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
 }
+
+.nav-settings-btn p {
+  color: var(--color-primary);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.nav-settings-btn svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
 
 
 /* ── Interruptor de fila (tabla de Consumibles) ── */
@@ -4462,4 +4545,153 @@ label.toggle input[type="checkbox"]:checked::after {
 /* El espacio bajo las tabs ya lo pone el gap de #lista2ListView. */
 #lista2ViewTabs {
   margin-bottom: 0;
+}
+
+/* ── Modal de Ajustes general ── */
+/* Botón de cierre en la esquina superior derecha del modal. */
+.modal-close-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  background: var(--color-quaternary);
+  color: var(--color-primary);
+}
+
+/* El margen inferior lo lleva la cabecera y no el título, para que el título y
+   la X queden alineados entre sí. */
+#appSettingsModal .modal-header {
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+#appSettingsModal .modal-header h2 {
+  margin: 0;
+}
+
+/* Este modal ya no tiene .modal-actions abajo, que era quien aportaba el
+   espacio inferior. */
+#appSettingsModal .modal-content {
+  padding-bottom: 24px;
+}
+
+/* ── Modal de Ajustes general: navegación lateral ── */
+.app-settings-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  min-height: 220px;
+}
+
+.app-settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 116px;
+  flex-shrink: 0;
+}
+
+.app-settings-nav-btn {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+.app-settings-nav-btn:hover {
+  background: var(--color-quinary);
+  color: var(--color-primary);
+}
+
+.app-settings-nav-btn.active {
+  background: var(--color-quaternary);
+  color: var(--color-primary);
+}
+
+.app-settings-panels {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-settings-panel {
+  display: none;
+}
+
+.app-settings-panel.active {
+  display: block;
+}
+
+/* El helper del panel va pegado a su título, sin el margen negativo que usa
+   bajo los campos de formulario. */
+.settings-panel-helper {
+  margin: -10px 0 16px;
+}
+
+.settings-session-label {
+  font-size: 13px;
+  line-height: 18px;
+  color: #9C9894;
+  margin: 0 0 2px;
+}
+
+.settings-session-email {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+  color: var(--color-primary);
+  margin: 0 0 20px;
+  overflow-wrap: anywhere;
+}
+
+/* Vive dentro del modal de ajustes desde que salió de la barra lateral. */
+.logout-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border-radius: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 24px;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-primary);
+  text-align: left;
+}
+
+.logout-btn:hover {
+  background: none;
+}
+
+@media (max-width: 480px) {
+  .app-settings-layout {
+    gap: 12px;
+  }
+
+  .app-settings-nav {
+    width: 96px;
+  }
 }

@@ -96,14 +96,15 @@
     <p>Consumibles</p>
   </button>
   </div>
-  <button type="button" id="logout-btn" class="logout-btn">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7.5 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M13.3333 14.1666L17.5 9.99992L13.3333 5.83325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M17.5 10H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    Cerrar sesión
-  </button>
+  <div class="tabs-footer">
+    <button type="button" id="openAppSettingsModal" class="nav-settings-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p>Ajustes</p>
+    </button>
+  </div>
 </nav>
 
 
@@ -829,12 +830,6 @@
           </div>
         </div>
       </div>
-      <button type="button" id="openIngredientSettingsModal" class="settings-btn" aria-label="Ajustes">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
       <button type="button" id="openIngredientModal" class="primary-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
@@ -1029,12 +1024,6 @@
           </button>
         </div>
       </div>
-      <button type="button" id="openConsumableSettingsModal" class="settings-btn" aria-label="Ajustes">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
       <button type="button" id="openConsumableModal" class="primary-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12.9766 19.7188C12.9766 19.901 12.9323 20.0651 12.8438 20.2109C12.7552 20.3568 12.6354 20.474 12.4844 20.5625C12.3385 20.651 12.1745 20.6953 11.9922 20.6953C11.8203 20.6953 11.6589 20.651 11.5078 20.5625C11.3568 20.474 11.237 20.3568 11.1484 20.2109C11.0651 20.0651 11.0234 19.901 11.0234 19.7188V4.99219C11.0234 4.82031 11.0651 4.65885 11.1484 4.50781C11.237 4.35677 11.3568 4.23698 11.5078 4.14844C11.6589 4.0599 11.8203 4.01562 11.9922 4.01562C12.1745 4.01562 12.3385 4.0599 12.4844 4.14844C12.6354 4.23698 12.7552 4.35677 12.8438 4.50781C12.9323 4.65885 12.9766 4.82031 12.9766 4.99219V19.7188ZM4.63281 13.3359C4.45573 13.3359 4.29167 13.2917 4.14062 13.2031C3.99479 13.1146 3.8776 12.9974 3.78906 12.8516C3.70052 12.7005 3.65625 12.5365 3.65625 12.3594C3.65625 12.1771 3.70052 12.013 3.78906 11.8672C3.8776 11.7214 3.99479 11.6042 4.14062 11.5156C4.29167 11.4271 4.45573 11.3828 4.63281 11.3828H19.3594C19.5417 11.3828 19.7057 11.4271 19.8516 11.5156C19.9974 11.6042 20.1146 11.7214 20.2031 11.8672C20.2917 12.013 20.3359 12.1771 20.3359 12.3594C20.3359 12.5365 20.2917 12.7005 20.2031 12.8516C20.1146 12.9974 19.9974 13.1146 19.8516 13.2031C19.7057 13.2917 19.5417 13.3359 19.3594 13.3359H4.63281Z" fill="currentColor"/>
@@ -1176,79 +1165,69 @@
   </div>
 </div>
 
-<!-- Modal: Ajustes de Ingredientes (ubicaciones y comercios) -->
-<div id="ingredientSettingsModal" class="modal modal--form hidden" aria-hidden="true">
+<!-- Modal: Ajustes de la aplicación -->
+<div id="appSettingsModal" class="modal modal--form hidden" aria-hidden="true">
   <div class="modal-content modal__sheet">
     <div class="modal-header">
       <h2>Ajustes</h2>
+      <button type="button" id="closeAppSettingsModal" class="modal-close-btn" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
-    <div class="settings-body">
-      <div class="settings-section">
-        <span class="form-section-label">Ubicaciones</span>
-        <ul id="ingredientSettingsLocationsList" class="settings-list"></ul>
-        <button type="button" id="addIngredientSettingsLocation" class="settings-add-btn">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <span>Añadir ubicación</span>
-        </button>
-      </div>
+    <div class="app-settings-layout">
+      <nav class="app-settings-nav" id="appSettingsNav">
+        <button type="button" class="app-settings-nav-btn" data-app-settings-tab="stores">Comercios</button>
+        <button type="button" class="app-settings-nav-btn" data-app-settings-tab="locations">Ubicaciones</button>
+        <button type="button" class="app-settings-nav-btn" data-app-settings-tab="session">Sesión</button>
+      </nav>
 
-      <div class="settings-section">
-        <span class="form-section-label">Comercios</span>
-        <ul id="ingredientSettingsStoresList" class="settings-list"></ul>
-        <button type="button" id="addIngredientSettingsStore" class="settings-add-btn">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <span>Añadir comercio</span>
-        </button>
-      </div>
-    </div>
+      <div class="app-settings-panels">
+        <div class="app-settings-panel" data-app-settings-panel="stores">
+          <span class="form-section-label">Comercios</span>
+          <p class="field-helper settings-panel-helper">Se usan en Ingredientes y en Consumibles.</p>
+          <ul id="appSettingsStoresList" class="settings-list"></ul>
+          <button type="button" id="addAppSettingsStore" class="settings-add-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>Añadir comercio</span>
+          </button>
+        </div>
 
-    <div class="modal-actions">
-      <button type="button" id="closeIngredientSettingsModal" class="secondary">Cerrar</button>
+        <div class="app-settings-panel" data-app-settings-panel="locations">
+          <span class="form-section-label">Ubicaciones</span>
+          <p class="field-helper settings-panel-helper">Se usan en Ingredientes y en Consumibles.</p>
+          <ul id="appSettingsLocationsList" class="settings-list"></ul>
+          <button type="button" id="addAppSettingsLocation" class="settings-add-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>Añadir ubicación</span>
+          </button>
+        </div>
+
+        <div class="app-settings-panel" data-app-settings-panel="session">
+          <span class="form-section-label">Sesión</span>
+          <p class="settings-session-label">Sesión iniciada como</p>
+          <p class="settings-session-email" id="appSettingsEmail">—</p>
+        <button type="button" id="logout-btn" class="logout-btn">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.5 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M13.3333 14.1666L17.5 9.99992L13.3333 5.83325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M17.5 10H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Cerrar sesión
+        </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Modal: Ajustes de Consumibles (ubicaciones y comercios) -->
-<div id="consumableSettingsModal" class="modal modal--form hidden" aria-hidden="true">
-  <div class="modal-content modal__sheet">
-    <div class="modal-header">
-      <h2>Ajustes</h2>
-    </div>
 
-    <div class="settings-body">
-      <div class="settings-section">
-        <span class="form-section-label">Ubicaciones</span>
-        <ul id="consumableSettingsLocationsList" class="settings-list"></ul>
-        <button type="button" id="addConsumableSettingsLocation" class="settings-add-btn">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <span>Añadir ubicación</span>
-        </button>
-      </div>
-
-      <div class="settings-section">
-        <span class="form-section-label">Comercios</span>
-        <ul id="consumableSettingsStoresList" class="settings-list"></ul>
-        <button type="button" id="addConsumableSettingsStore" class="settings-add-btn">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3.5V12.5M3.5 8H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <span>Añadir comercio</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button type="button" id="closeConsumableSettingsModal" class="secondary">Cerrar</button>
-    </div>
-  </div>
-</div>
 
 <!-- Modal: Nuevo ingrediente -->
 <div id="newIngredientModal" class="modal modal--form hidden" aria-hidden="true">

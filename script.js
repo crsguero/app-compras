@@ -35,10 +35,37 @@ if (ingredients.some(i => !i.shoppingType)) {
 let consumables = safeLoad('consumables', []);
 // Ajustes de ubicaciones/comercios, independientes por pestaña.
 // null = todavía sin inicializar (se siembra en ensureSettingsSeed).
-let settingsIngredientLocations = safeLoad('settingsIngredientLocations', null);
-let settingsIngredientStores    = safeLoad('settingsIngredientStores', null);
-let settingsConsumableLocations = safeLoad('settingsConsumableLocations', null);
-let settingsConsumableStores    = safeLoad('settingsConsumableStores', null);
+// Comercios y ubicaciones son listas únicas, compartidas por Ingredientes y
+// Consumibles, y se editan desde el modal de Ajustes general.
+let settingsSharedStores = safeLoad('settingsSharedStores', null);
+let settingsSharedLocations = safeLoad('settingsSharedLocations', null);
+
+// Las listas separadas anteriores. Ya no se editan: solo se leen para
+// fusionarlas en las compartidas y no perder lo que hubiera configurado.
+const _oldIngredientStores = safeLoad('settingsIngredientStores', null);
+const _oldConsumableStores = safeLoad('settingsConsumableStores', null);
+const _oldIngredientLocations = safeLoad('settingsIngredientLocations', null);
+const _oldConsumableLocations = safeLoad('settingsConsumableLocations', null);
+
+// Fusión conservadora: se respeta el orden de la primera lista y se añaden al
+// final las entradas que solo existieran en las siguientes. Si una misma clave
+// está en varias con nombres distintos, gana la primera; da igual cuál se
+// elija porque los registros guardan la clave y no el nombre, así que ninguna
+// asignación se rompe.
+function mergeSettingsLists(...lists) {
+  const merged = [];
+  const seen = new Set();
+  lists.forEach((list) => {
+    if (!Array.isArray(list)) return;
+    list.forEach((it) => {
+      const value = it.value || slugifySettingValue(it.name || '');
+      if (!value || seen.has(value)) return;
+      seen.add(value);
+      merged.push({ id: it.id ?? Date.now() + merged.length, value, name: it.name || '' });
+    });
+  });
+  return merged;
+}
 
 // Claves de la versión anterior, cuando la lista era única y se editaba desde
 // Consumibles. Se conservan para migrarlas a las listas de Consumibles.
@@ -360,78 +387,52 @@ function getWeekdayName(dateString) {
 let _settingsEditing = null;
 
 const SETTINGS_LISTS = {
-  'ingredient-location': {
-    storageKey: 'settingsIngredientLocations',
-    fbPath: 'compra/settingsIngredientLocations',
-    getItems: () => settingsIngredientLocations,
-    setItems: (v) => { settingsIngredientLocations = v; },
-    listElId: 'ingredientSettingsLocationsList',
+  'shared-location': {
+    storageKey: 'settingsSharedLocations',
+    fbPath: 'compra/settingsSharedLocations',
+    getItems: () => settingsSharedLocations,
+    setItems: (v) => { settingsSharedLocations = v; },
+    listElId: 'appSettingsLocationsList',
     fallbackLabels: LOCATION_LABELS,
-    legacy: () => null,
+    legacy: () => mergeSettingsLists(_oldIngredientLocations, _oldConsumableLocations),
     noun: 'ubicación',
     plural: 'ubicaciones',
     placeholder: 'Nombre de la ubicación...',
-    usageCount: (value) => ingredients.filter((i) => (i.location || '') === value).length,
-    usageNoun: 'ingrediente',
+    usageCount: (value) =>
+      ingredients.filter((i) => (i.location || '') === value).length
+      + consumables.filter((c) => (c.location || '') === value).length,
+    usageNoun: 'elemento',
+    showUsage: true,
     onChange: () => {
       refreshIngredientSelects();
+      refreshConsumableSelects();
       renderIngredients();
+      renderConsumables();
       renderFilterPanel();
     },
   },
-  'ingredient-store': {
-    storageKey: 'settingsIngredientStores',
-    fbPath: 'compra/settingsIngredientStores',
-    getItems: () => settingsIngredientStores,
-    setItems: (v) => { settingsIngredientStores = v; },
-    listElId: 'ingredientSettingsStoresList',
+  'shared-store': {
+    storageKey: 'settingsSharedStores',
+    fbPath: 'compra/settingsSharedStores',
+    getItems: () => settingsSharedStores,
+    setItems: (v) => { settingsSharedStores = v; },
+    listElId: 'appSettingsStoresList',
     fallbackLabels: STORE_LABELS,
-    legacy: () => null,
+    legacy: () => mergeSettingsLists(_oldIngredientStores, _oldConsumableStores),
     noun: 'comercio',
     plural: 'comercios',
     placeholder: 'Nombre del comercio...',
-    usageCount: (value) => ingredients.filter((i) => (i.store || '') === value).length,
-    usageNoun: 'ingrediente',
+    usageCount: (value) =>
+      ingredients.filter((i) => (i.store || '') === value).length
+      + consumables.filter((c) => (c.store || '') === value).length,
+    usageNoun: 'elemento',
+    showUsage: true,
     onChange: () => {
       refreshIngredientSelects();
+      refreshConsumableSelects();
       renderIngredients();
+      renderConsumables();
       renderFilterPanel();
-    },
-  },
-  'consumable-location': {
-    storageKey: 'settingsConsumableLocations',
-    fbPath: 'compra/settingsConsumableLocations',
-    getItems: () => settingsConsumableLocations,
-    setItems: (v) => { settingsConsumableLocations = v; },
-    listElId: 'consumableSettingsLocationsList',
-    fallbackLabels: LOCATION_LABELS,
-    legacy: () => _legacySettingsLocations,
-    noun: 'ubicación',
-    plural: 'ubicaciones',
-    placeholder: 'Nombre de la ubicación...',
-    usageCount: (value) => consumables.filter((c) => (c.location || '') === value).length,
-    usageNoun: 'consumible',
-    onChange: () => {
-      refreshConsumableSelects();
-      renderConsumables();
-    },
-  },
-  'consumable-store': {
-    storageKey: 'settingsConsumableStores',
-    fbPath: 'compra/settingsConsumableStores',
-    getItems: () => settingsConsumableStores,
-    setItems: (v) => { settingsConsumableStores = v; },
-    listElId: 'consumableSettingsStoresList',
-    fallbackLabels: STORE_LABELS,
-    legacy: () => _legacySettingsStores,
-    noun: 'comercio',
-    plural: 'comercios',
-    placeholder: 'Nombre del comercio...',
-    usageCount: (value) => consumables.filter((c) => (c.store || '') === value).length,
-    usageNoun: 'consumible',
-    onChange: () => {
-      refreshConsumableSelects();
-      renderConsumables();
     },
   },
 };
@@ -595,8 +596,8 @@ function closeIngredientPanel() {
 if (openIngredientModalBtn) {
   openIngredientModalBtn.addEventListener('click', () => {
     if (newIngredientForm) newIngredientForm.reset();
-    populateSettingsSelect(newLocationSelect, 'ingredient-location', '', 'Selecciona una ubicación...');
-    populateSettingsSelect(newStoreSelect, 'ingredient-store', '', 'Selecciona un comercio...');
+    populateSettingsSelect(newLocationSelect, 'shared-location', '', 'Selecciona una ubicación...');
+    populateSettingsSelect(newStoreSelect, 'shared-store', '', 'Selecciona un comercio...');
     if (newPantryToggle) newPantryToggle.checked = false;
     if (newMinQuantityWrapper) newMinQuantityWrapper.classList.add('hidden');
     if (newMinQuantityInput) newMinQuantityInput.required = false;
@@ -758,7 +759,7 @@ function renderFilterPanel() {
   storeTitle.className = 'filter-section-title';
   storeTitle.textContent = 'Comercio';
   storeSection.appendChild(storeTitle);
-  settingsOptions('ingredient-store', ingredients.map((i) => i.store)).forEach(({ value: key, label }) => {
+  settingsOptions('shared-store', ingredients.map((i) => i.store)).forEach(({ value: key, label }) => {
     const opt = document.createElement('label');
     opt.className = 'filter-option';
     const cb = document.createElement('input');
@@ -783,7 +784,7 @@ function renderFilterPanel() {
   locTitle.className = 'filter-section-title';
   locTitle.textContent = 'Ubicación';
   locSection.appendChild(locTitle);
-  settingsOptions('ingredient-location', ingredients.map((i) => i.location)).forEach(({ value: key, label }) => {
+  settingsOptions('shared-location', ingredients.map((i) => i.location)).forEach(({ value: key, label }) => {
     const opt = document.createElement('label');
     opt.className = 'filter-option';
     const cb = document.createElement('input');
@@ -877,8 +878,8 @@ function renderIngredients() {
 }
 
 function applyIngredientSort(arr, col, dir) {
-  const storeOrder = settingsOrder('ingredient-store');
-  const locationOrder = settingsOrder('ingredient-location');
+  const storeOrder = settingsOrder('shared-store');
+  const locationOrder = settingsOrder('shared-location');
 
   return [...arr].sort((a, b) => {
     let cmp = 0;
@@ -971,7 +972,7 @@ function renderIngredientsTable(raw) {
 
     // Ubicación
     const locTd = document.createElement('td');
-    locTd.textContent = settingsLabel('ingredient-location', ingredient.location);
+    locTd.textContent = settingsLabel('shared-location', ingredient.location);
     tr.appendChild(locTd);
 
     // Despensa
@@ -986,7 +987,7 @@ function renderIngredientsTable(raw) {
 
     // Comercio
     const storeTd = document.createElement('td');
-    storeTd.textContent = settingsLabel('ingredient-store', ingredient.store);
+    storeTd.textContent = settingsLabel('shared-store', ingredient.store);
     tr.appendChild(storeTd);
 
     tr.style.cursor = 'pointer';
@@ -1056,8 +1057,8 @@ function startEditIngredient(id) {
   unitInput.value = ingredient.unit;
   // Se repueblan con el valor guardado para que, si esa ubicación/comercio ya
   // no está en los ajustes, siga apareciendo y no se pierda al editar.
-  populateSettingsSelect(storeSelect, 'ingredient-store', ingredient.store || '', 'Selecciona un comercio...');
-  populateSettingsSelect(locationSelect, 'ingredient-location', ingredient.location || '', 'Selecciona una ubicación...');
+  populateSettingsSelect(storeSelect, 'shared-store', ingredient.store || '', 'Selecciona un comercio...');
+  populateSettingsSelect(locationSelect, 'shared-location', ingredient.location || '', 'Selecciona una ubicación...');
   if (shoppingTypeSelect) shoppingTypeSelect.value = ingredient.shoppingType || '';
   if (productInput) productInput.value = ingredient.product || '';
   if (productUnitSelect) productUnitSelect.value = ingredient.productUnit || '';
@@ -1414,8 +1415,8 @@ function closeConsumablePanel() {
 if (openConsumableModalBtn) {
   openConsumableModalBtn.addEventListener('click', () => {
     if (newConsumableForm) newConsumableForm.reset();
-    populateSettingsSelect(newConsumableLocationSelect, 'consumable-location', '', 'Selecciona una ubicación...');
-    populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', '', 'Selecciona un comercio...');
+    populateSettingsSelect(newConsumableLocationSelect, 'shared-location', '', 'Selecciona una ubicación...');
+    populateSettingsSelect(newConsumableStoreSelect, 'shared-store', '', 'Selecciona un comercio...');
     openModal(newConsumableModal);
   });
 }
@@ -1489,8 +1490,8 @@ function renderConsumables() {
 }
 
 function applyConsumableSort(arr, col, dir) {
-  const storeOrder = settingsOrder('consumable-store');
-  const locationOrder = settingsOrder('consumable-location');
+  const storeOrder = settingsOrder('shared-store');
+  const locationOrder = settingsOrder('shared-location');
 
   return [...arr].sort((a, b) => {
     let cmp = 0;
@@ -1565,11 +1566,11 @@ function renderConsumablesTable(raw) {
     tr.appendChild(minQtyTd);
 
     const locTd = document.createElement('td');
-    locTd.textContent = settingsLabel('consumable-location', consumable.location);
+    locTd.textContent = settingsLabel('shared-location', consumable.location);
     tr.appendChild(locTd);
 
     const storeTd = document.createElement('td');
-    storeTd.textContent = settingsLabel('consumable-store', consumable.store);
+    storeTd.textContent = settingsLabel('shared-store', consumable.store);
     tr.appendChild(storeTd);
 
     const productTd = document.createElement('td');
@@ -1659,8 +1660,8 @@ function startEditConsumable(id) {
 
   consumableNameInput.value = consumable.name;
   if (consumableMinQuantityInput) consumableMinQuantityInput.value = consumable.minQuantity || '';
-  populateSettingsSelect(consumableLocationSelect, 'consumable-location', consumable.location || '', 'Selecciona una ubicación...');
-  populateSettingsSelect(consumableStoreSelect, 'consumable-store', consumable.store || '', 'Selecciona un comercio...');
+  populateSettingsSelect(consumableLocationSelect, 'shared-location', consumable.location || '', 'Selecciona una ubicación...');
+  populateSettingsSelect(consumableStoreSelect, 'shared-store', consumable.store || '', 'Selecciona un comercio...');
   if (consumableProductInput) consumableProductInput.value = consumable.product || '';
 
   consumableForm.querySelector('button[type="submit"]').textContent = 'Guardar cambios';
@@ -1804,55 +1805,32 @@ if (consumableSearchCloseBtn) {
 // -----------------------
 // AJUSTES: UBICACIONES Y COMERCIOS (interfaz del modal)
 // -----------------------
-const SETTINGS_SCOPES = {
-  ingredient: {
-    modalId: 'ingredientSettingsModal',
-    openBtnId: 'openIngredientSettingsModal',
-    closeBtnId: 'closeIngredientSettingsModal',
-    lists: {
-      'ingredient-location': 'addIngredientSettingsLocation',
-      'ingredient-store': 'addIngredientSettingsStore',
-    },
-  },
-  consumable: {
-    modalId: 'consumableSettingsModal',
-    openBtnId: 'openConsumableSettingsModal',
-    closeBtnId: 'closeConsumableSettingsModal',
-    lists: {
-      'consumable-location': 'addConsumableSettingsLocation',
-      'consumable-store': 'addConsumableSettingsStore',
-    },
-  },
-};
-
 function refreshIngredientSelects() {
-  populateSettingsSelect(locationSelect, 'ingredient-location', undefined, 'Selecciona una ubicación...');
-  populateSettingsSelect(storeSelect, 'ingredient-store', undefined, 'Selecciona un comercio...');
-  populateSettingsSelect(newLocationSelect, 'ingredient-location', undefined, 'Selecciona una ubicación...');
-  populateSettingsSelect(newStoreSelect, 'ingredient-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(locationSelect, 'shared-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(storeSelect, 'shared-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(newLocationSelect, 'shared-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(newStoreSelect, 'shared-store', undefined, 'Selecciona un comercio...');
 }
 
 function refreshConsumableSelects() {
-  populateSettingsSelect(consumableLocationSelect, 'consumable-location', undefined, 'Selecciona una ubicación...');
-  populateSettingsSelect(consumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
-  populateSettingsSelect(newConsumableLocationSelect, 'consumable-location', undefined, 'Selecciona una ubicación...');
-  populateSettingsSelect(newConsumableStoreSelect, 'consumable-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(consumableLocationSelect, 'shared-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(consumableStoreSelect, 'shared-store', undefined, 'Selecciona un comercio...');
+  populateSettingsSelect(newConsumableLocationSelect, 'shared-location', undefined, 'Selecciona una ubicación...');
+  populateSettingsSelect(newConsumableStoreSelect, 'shared-store', undefined, 'Selecciona un comercio...');
 }
 
 
-function makeSettingsIconBtn({ className, label, svg, disabled = false }) {
+function makeSettingsIconBtn({ className, label, svg }) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = `settings-row-btn ${className}`;
   btn.setAttribute('aria-label', label);
   btn.innerHTML = svg;
-  if (disabled) btn.disabled = true;
   return btn;
 }
 
 const SETTINGS_ICONS = {
-  up: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10L8 6L12 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  down: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  grip: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg>',
   edit: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2a1.885 1.885 0 0 1 2.667 2.667L4.889 13.778 2 14l.222-2.889L11.333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   delete: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4h12M6 4V2.667A.667.667 0 0 1 6.667 2h2.666a.667.667 0 0 1 .667.667V4m2 0v9.333a.667.667 0 0 1-.667.667H4.667A.667.667 0 0 1 4 13.333V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   confirm: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1894,6 +1872,13 @@ function renderSettingsList(listKey) {
   const listEl = document.getElementById(cfg.listElId);
   if (!listEl) return;
 
+  // Los listeners viven en la propia <ul>, que sobrevive a cada repintado:
+  // engancharlos una sola vez evita duplicarlos.
+  if (!listEl.dataset.dragReady) {
+    enableSettingsDrag(listEl, listKey);
+    listEl.dataset.dragReady = '1';
+  }
+
   const items = cfg.getItems() || [];
   listEl.innerHTML = '';
 
@@ -1905,7 +1890,7 @@ function renderSettingsList(listKey) {
     return;
   }
 
-  items.forEach((item, index) => {
+  items.forEach((item) => {
     const li = document.createElement('li');
     li.className = 'settings-row';
     li.dataset.id = item.id;
@@ -1961,26 +1946,26 @@ function renderSettingsList(listKey) {
       return;
     }
 
+    const handle = document.createElement('span');
+    handle.className = 'settings-row-handle';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = SETTINGS_ICONS.grip;
+    li.appendChild(handle);
+
     const nameEl = document.createElement('span');
     nameEl.className = 'settings-row-name';
     nameEl.textContent = item.name;
     li.appendChild(nameEl);
 
-    const upBtn = makeSettingsIconBtn({
-      className: 'settings-row-btn--move',
-      label: 'Subir',
-      svg: SETTINGS_ICONS.up,
-      disabled: index === 0,
-    });
-    upBtn.addEventListener('click', () => moveSettingsItem(listKey, item.id, -1));
-
-    const downBtn = makeSettingsIconBtn({
-      className: 'settings-row-btn--move',
-      label: 'Bajar',
-      svg: SETTINGS_ICONS.down,
-      disabled: index === items.length - 1,
-    });
-    downBtn.addEventListener('click', () => moveSettingsItem(listKey, item.id, 1));
+    // Cuántos registros usan esta entrada ahora mismo.
+    if (cfg.showUsage) {
+      const used = cfg.usageCount(item.value);
+      const countEl = document.createElement('span');
+      countEl.className = 'settings-row-count' + (used > 0 ? ' is-used' : '');
+      countEl.textContent = used;
+      countEl.title = `${used} ${used === 1 ? cfg.usageNoun : cfg.usageNoun + 's'}`;
+      li.appendChild(countEl);
+    }
 
     const editBtn = makeSettingsIconBtn({
       className: 'settings-row-btn--edit',
@@ -2011,23 +1996,74 @@ function renderSettingsList(listKey) {
       renderSettings();
     });
 
-    [upBtn, downBtn, editBtn, deleteBtn].forEach((b) => actions.appendChild(b));
+    [editBtn, deleteBtn].forEach((b) => actions.appendChild(b));
     li.appendChild(actions);
     listEl.appendChild(li);
   });
 }
 
-function moveSettingsItem(listKey, id, delta) {
+// Aplica el orden que haya quedado en el DOM tras arrastrar.
+function reorderSettingsItems(listKey, orderedIds) {
   const cfg = SETTINGS_LISTS[listKey];
-  const items = [...(cfg.getItems() || [])];
-  const from = items.findIndex((it) => it.id === id);
-  const to = from + delta;
-  if (from === -1 || to < 0 || to >= items.length) return;
-  [items[from], items[to]] = [items[to], items[from]];
-  cfg.setItems(items);
+  const items = cfg.getItems() || [];
+  const byId = new Map(items.map((it) => [String(it.id), it]));
+
+  const reordered = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+  if (reordered.length !== items.length) return;
+
+  const changed = reordered.some((it, i) => it.id !== items[i].id);
+  if (!changed) return;
+
+  cfg.setItems(reordered);
   saveSettingsList(listKey);
   cfg.onChange();
   renderSettings();
+}
+
+// Arrastre con eventos de puntero en lugar de la API de drag&drop de HTML5,
+// que en Safari de iOS no funciona: así se puede reordenar también desde el
+// móvil. Se mueve el <li> por el DOM mientras se arrastra y al soltar se
+// vuelca ese orden a los datos.
+function enableSettingsDrag(listEl, listKey) {
+  let dragging = null;
+
+  listEl.addEventListener('pointerdown', (e) => {
+    const handle = e.target.closest('.settings-row-handle');
+    // Si hay una fila en edición, su input tiene el foco: no se arrastra.
+    if (!handle || _settingsEditing) return;
+    const li = handle.closest('.settings-row');
+    if (!li) return;
+
+    e.preventDefault();
+    dragging = li;
+    li.classList.add('is-dragging');
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  listEl.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+
+    const others = [...listEl.querySelectorAll('.settings-row')].filter((r) => r !== dragging);
+    const before = others.find((r) => {
+      const box = r.getBoundingClientRect();
+      return e.clientY < box.top + box.height / 2;
+    });
+
+    if (before) listEl.insertBefore(dragging, before);
+    else listEl.appendChild(dragging);
+  });
+
+  const finishDrag = () => {
+    if (!dragging) return;
+    dragging.classList.remove('is-dragging');
+    dragging = null;
+    const order = [...listEl.querySelectorAll('.settings-row')].map((r) => r.dataset.id);
+    reorderSettingsItems(listKey, order);
+  };
+
+  listEl.addEventListener('pointerup', finishDrag);
+  listEl.addEventListener('pointercancel', finishDrag);
 }
 
 function addSettingsItem(listKey) {
@@ -2045,30 +2081,58 @@ function renderSettings() {
   Object.keys(SETTINGS_LISTS).forEach(renderSettingsList);
 }
 
-Object.values(SETTINGS_SCOPES).forEach((scope) => {
-  const modalEl = document.getElementById(scope.modalId);
+// Ajustes de la aplicación (botón inferior de la barra de navegación).
+// De momento el modal no tiene contenido: solo abre y cierra.
+const appSettingsModal = document.getElementById('appSettingsModal');
 
-  document.getElementById(scope.openBtnId)?.addEventListener('click', () => {
-    _settingsEditing = null;
-    renderSettings();
-    openModal(modalEl);
-  });
+const appSettingsEmail = document.getElementById('appSettingsEmail');
 
-  document.getElementById(scope.closeBtnId)?.addEventListener('click', () => {
-    _settingsEditing = null;
-    closeModal(modalEl);
-  });
+function renderAppSettingsSession() {
+  if (appSettingsEmail) appSettingsEmail.textContent = auth.currentUser?.email || '—';
+}
 
-  modalEl?.addEventListener('click', (e) => {
-    if (e.target === modalEl) {
-      _settingsEditing = null;
-      closeModal(modalEl);
-    }
-  });
+let _appSettingsTab = 'stores';
 
-  Object.entries(scope.lists).forEach(([listKey, addBtnId]) => {
-    document.getElementById(addBtnId)?.addEventListener('click', () => addSettingsItem(listKey));
+// La pestaña marcada se deduce del estado y se recalcula en cada pintado, para
+// que siempre haya exactamente una activa.
+function syncAppSettingsTabs() {
+  const btns = document.querySelectorAll('#appSettingsNav .app-settings-nav-btn');
+  if (!btns.length) return;
+
+  const known = [...btns].some((b) => b.dataset.appSettingsTab === _appSettingsTab);
+  if (!known) _appSettingsTab = 'stores';
+
+  btns.forEach((b) => b.classList.toggle('active', b.dataset.appSettingsTab === _appSettingsTab));
+  document.querySelectorAll('#appSettingsModal .app-settings-panel').forEach((panel) => {
+    panel.classList.toggle('active', panel.dataset.appSettingsPanel === _appSettingsTab);
   });
+}
+
+document.querySelectorAll('#appSettingsNav .app-settings-nav-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    _appSettingsTab = btn.dataset.appSettingsTab;
+    syncAppSettingsTabs();
+  });
+});
+
+document.getElementById('addAppSettingsStore')?.addEventListener('click', () => addSettingsItem('shared-store'));
+document.getElementById('addAppSettingsLocation')?.addEventListener('click', () => addSettingsItem('shared-location'));
+
+document.getElementById('openAppSettingsModal')?.addEventListener('click', () => {
+  _settingsEditing = null;
+  _appSettingsTab = 'stores';
+  syncAppSettingsTabs();
+  renderSettings();
+  renderAppSettingsSession();
+  openModal(appSettingsModal);
+});
+
+document.getElementById('closeAppSettingsModal')?.addEventListener('click', () => {
+  closeModal(appSettingsModal);
+});
+
+appSettingsModal?.addEventListener('click', (e) => {
+  if (e.target === appSettingsModal) closeModal(appSettingsModal);
 });
 
 ensureSettingsSeed();
@@ -4771,9 +4835,14 @@ function lista2CreatedAtISO(item) {
   return toISODateString(new Date(ts));
 }
 
-// En una lista mensual los nombres vienen de Consumibles, no de Ingredientes.
+// En una lista mensual conviven consumibles e ingredientes básicos de
+// despensa, así que se busca en las dos tablas.
 function findLista2Record(item, name) {
-  if (isLista2Mensual(item)) return consumables.find((c) => c.name === name) || null;
+  if (isLista2Mensual(item)) {
+    return consumables.find((c) => c.name === name)
+      || ingredients.find((i) => i.name === name)
+      || null;
+  }
   return ingredients.find((i) => i.name === name) || null;
 }
 
@@ -4895,10 +4964,17 @@ lista2Form?.addEventListener('submit', (e) => {
   if (!type) return;
 
   if (type === 'mensual') {
-    // Todos los consumibles activos, de cualquier comercio, juntos.
-    const ingredientNames = consumables
+    // Todos los consumibles activos, de cualquier comercio, más los
+    // ingredientes que sean a la vez de compra mensual y básicos de despensa.
+    const names = new Set();
+    consumables
       .filter((c) => c.active !== false)
-      .map((c) => c.name)
+      .forEach((c) => names.add(c.name));
+    ingredients
+      .filter((i) => i.shoppingType === 'mensual' && i.pantry)
+      .forEach((i) => names.add(i.name));
+
+    const ingredientNames = [...names]
       .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
     lista2Items.push({
@@ -5272,10 +5348,14 @@ document.getElementById('closeLista2ShopView')?.addEventListener('click', closeL
 function lista2QtyText(item, record, name, totalQty) {
   const shopOverride = (lista2ShopQty[item.id] || {})[name];
   const isOverridden = shopOverride != null;
+  // Un consumible no tiene unidad de receta ni conversión de producto; un
+  // ingrediente sí. Manda el registro, no el tipo de lista.
+  const hasUnits = !!record.unit;
+  const hasMin = record.minQuantity != null && record.minQuantity !== '';
   let text;
 
-  if (isLista2Mensual(item)) {
-    text = isOverridden ? String(shopOverride) : (record.minQuantity || '');
+  if (isOverridden && !hasUnits) {
+    text = String(shopOverride);
   } else if (isOverridden) {
     const formato = parseFloat(record.formato);
     const hasConversion = record.productUnit && record.formato != null && record.formato !== '' && formato > 0;
@@ -5286,8 +5366,14 @@ function lista2QtyText(item, record, name, totalQty) {
     } else {
       text = `${shopOverride} ${record.unit}`;
     }
+  } else if (!hasUnits) {
+    text = record.minQuantity || '';
+  } else if (isLista2Mensual(item)) {
+    // En una lista mensual no hay planificación: los ingredientes que entran
+    // son básicos de despensa, así que lo que aplica es su cantidad mínima.
+    text = hasMin ? formatMinQty(record) : '';
   } else {
-    const isPantryWithMin = record.pantry && record.minQuantity != null && record.minQuantity !== '';
+    const isPantryWithMin = record.pantry && hasMin;
     text = isPantryWithMin ? formatMinQty(record) : formatIngredientQty(record, totalQty);
   }
 
@@ -5413,7 +5499,7 @@ function renderLista2DetailList(item) {
     const shopQty = lista2ShopQty[item.id] || {};
 
     const locationOrder = isLista2Mensual(item)
-      ? [...settingsOrder('consumable-location'), 'sin-ubicacion']
+      ? [...settingsOrder('shared-location'), 'sin-ubicacion']
       : LISTA2_LOCATION_ORDER;
 
     const locationKeyOf = (name) => findLista2Record(item, name)?.location || 'sin-ubicacion';
@@ -5440,7 +5526,7 @@ function renderLista2DetailList(item) {
           locationHeader.textContent = 'Sin ubicación';
         } else {
           locationHeader.textContent = isLista2Mensual(item)
-            ? settingsLabel('consumable-location', locationKey)
+            ? settingsLabel('shared-location', locationKey)
             : (LOCATION_LABELS[locationKey] || 'Sin ubicación');
         }
         lista2DetailList.appendChild(locationHeader);
@@ -5654,11 +5740,8 @@ function renderLista2ShopList(item) {
   const totalQtyByIngredient = isLista2Mensual(item) ? new Map() : buildTotalQtyMap(item);
   const shopQty = lista2ShopQty[item.id] || {};
 
-  // Una lista mensual se agrupa por las ubicaciones de Consumibles, en el
-  // orden configurado en los ajustes de esa pestaña.
-  const locationOrder = isLista2Mensual(item)
-    ? [...settingsOrder('consumable-location'), 'sin-ubicacion']
-    : LISTA2_LOCATION_ORDER;
+  // Las ubicaciones son una lista única: manda el orden configurado en Ajustes.
+  const locationOrder = [...settingsOrder('shared-location'), 'sin-ubicacion'];
 
   const locationKeyOf = (name) => findLista2Record(item, name)?.location || 'sin-ubicacion';
 
@@ -5680,13 +5763,9 @@ function renderLista2ShopList(item) {
       currentLocationKey = locationKey;
       const locationHeader = document.createElement('li');
       locationHeader.className = 'lista2-shop-location-header';
-      if (locationKey === 'sin-ubicacion') {
-        locationHeader.textContent = 'Sin ubicación';
-      } else {
-        locationHeader.textContent = isLista2Mensual(item)
-          ? settingsLabel('consumable-location', locationKey)
-          : (LOCATION_LABELS[locationKey] || 'Sin ubicación');
-      }
+      locationHeader.textContent = locationKey === 'sin-ubicacion'
+        ? 'Sin ubicación'
+        : settingsLabel('shared-location', locationKey);
       lista2ShopList.appendChild(locationHeader);
     }
 
@@ -5705,8 +5784,13 @@ function renderLista2ShopList(item) {
     if (ingredient) {
       let prefix, qtyText;
       if (isLista2Mensual(item)) {
+        // Tanto los consumibles como los ingredientes de una lista mensual
+        // aportan su cantidad mínima; solo los ingredientes llevan unidad.
         prefix = 'Mínima';
-        qtyText = ingredient.minQuantity || '';
+        const hasMin = ingredient.minQuantity != null && ingredient.minQuantity !== '';
+        qtyText = hasMin
+          ? (ingredient.unit ? formatMinQty(ingredient) : String(ingredient.minQuantity))
+          : '';
       } else {
         const totalQty = totalQtyByIngredient.get(name);
         const isPantry = ingredient.pantry && ingredient.minQuantity != null && ingredient.minQuantity !== '';
@@ -5808,22 +5892,15 @@ const lista2DetailHeaderActions = document.querySelector('.lista2-detail-header-
 // de Ingredientes o de la de Consumibles, que se configuran por separado.
 function lista2StoreLabel(key) {
   if (!key) return 'Sin comercio';
-  const fromIngredients = getSettingsItems('ingredient-store').find((it) => it.value === key);
-  if (fromIngredients) return fromIngredients.name;
-  const fromConsumables = getSettingsItems('consumable-store').find((it) => it.value === key);
-  if (fromConsumables) return fromConsumables.name;
-  return STORE_LABELS[key] || key;
+  return settingsLabel('shared-store', key);
 }
 
 // Orden de los comercios: primero el configurado en Ingredientes, después los
 // que solo existan en Consumibles, y al final los sueltos y el "sin comercio".
 function lista2StoreRank(key) {
   if (!key) return 3000;
-  const ing = settingsOrder('ingredient-store').indexOf(key);
-  if (ing !== -1) return ing;
-  const cons = settingsOrder('consumable-store').indexOf(key);
-  if (cons !== -1) return 1000 + cons;
-  return 2000;
+  const i = settingsOrder('shared-store').indexOf(key);
+  return i === -1 ? 2000 : i;
 }
 
 // Map(comercio -> Map(nombre -> { name, listIds, sourceItem })).
@@ -6161,10 +6238,8 @@ function startFirebaseListeners() {
   const paths = [
     { key: 'ingredients',      ref: 'compra/ingredients',      set: v => { ingredients      = Array.isArray(v) ? v : []; }, render: () => renderIngredients() },
     { key: 'consumables',      ref: 'compra/consumables',      set: v => { consumables      = Array.isArray(v) ? v : []; }, render: () => renderConsumables() },
-    { key: 'settingsIngredientLocations', ref: 'compra/settingsIngredientLocations', set: v => { settingsIngredientLocations = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
-    { key: 'settingsIngredientStores',    ref: 'compra/settingsIngredientStores',    set: v => { settingsIngredientStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); renderIngredients(); } },
-    { key: 'settingsConsumableLocations', ref: 'compra/settingsConsumableLocations', set: v => { settingsConsumableLocations = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshConsumableSelects(); renderConsumables(); } },
-    { key: 'settingsConsumableStores',    ref: 'compra/settingsConsumableStores',    set: v => { settingsConsumableStores    = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshConsumableSelects(); renderConsumables(); } },
+    { key: 'settingsSharedLocations',     ref: 'compra/settingsSharedLocations',     set: v => { settingsSharedLocations     = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); refreshConsumableSelects(); renderIngredients(); renderConsumables(); } },
+    { key: 'settingsSharedStores',        ref: 'compra/settingsSharedStores',        set: v => { settingsSharedStores        = Array.isArray(v) ? v : []; }, render: () => { renderSettings(); refreshIngredientSelects(); refreshConsumableSelects(); renderIngredients(); renderConsumables(); } },
     { key: 'recipes',          ref: 'compra/recipes',          set: v => { recipes          = Array.isArray(v) ? v.map(r => ({ ...r, ingredients: r.ingredients || [] })) : []; }, render: () => { renderRecipes(); renderCalendarEntries(); } },
     { key: 'calendarEntries',  ref: 'compra/calendarEntries',  set: v => { calendarEntries  = Array.isArray(v) ? v : []; }, render: () => renderCalendarEntries() },
     { key: 'calendarCooked',   ref: 'compra/calendarCooked',   set: v => { calendarCooked   = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }, render: () => renderCalendarEntries() },
@@ -6178,9 +6253,15 @@ function startFirebaseListeners() {
   // Rutas de la versión anterior de los ajustes (lista única editada desde
   // Consumibles). Se leen para migrarlas a las listas de Consumibles en
   // dispositivos donde no quede el localStorage antiguo.
+  // Varias rutas pueden alimentar el mismo destino: los comercios vivían en
+  // tres sitios distintos antes de unificarse en una sola lista.
   const legacySettingsPaths = [
-    { ref: 'compra/settingsLocations', target: 'settingsConsumableLocations' },
-    { ref: 'compra/settingsStores',    target: 'settingsConsumableStores' },
+    { ref: 'compra/settingsIngredientLocations', target: 'settingsSharedLocations' },
+    { ref: 'compra/settingsConsumableLocations', target: 'settingsSharedLocations' },
+    { ref: 'compra/settingsLocations',           target: 'settingsSharedLocations' },
+    { ref: 'compra/settingsIngredientStores',    target: 'settingsSharedStores' },
+    { ref: 'compra/settingsConsumableStores',    target: 'settingsSharedStores' },
+    { ref: 'compra/settingsStores',              target: 'settingsSharedStores' },
   ];
 
   // Initial one-time load from Firebase; migrate from localStorage if Firebase is empty
@@ -6194,12 +6275,17 @@ function startFirebaseListeners() {
 
       // Lo que había en las rutas antiguas manda sobre la semilla local, para
       // no perder las listas que ya se hubieran configurado desde Consumibles.
-      const legacyValues = {};
+      const legacyByTarget = {};
       legacySnaps.forEach((snap, i) => {
         const val = fromFirebase(snap.val());
-        if (Array.isArray(val) && val.length) {
-          legacyValues[legacySettingsPaths[i].target] = val;
-        }
+        if (!Array.isArray(val) || !val.length) return;
+        const target = legacySettingsPaths[i].target;
+        (legacyByTarget[target] = legacyByTarget[target] || []).push(val);
+      });
+
+      const legacyValues = {};
+      Object.entries(legacyByTarget).forEach(([target, lists]) => {
+        legacyValues[target] = mergeSettingsLists(...lists);
       });
 
       snaps.forEach((snap, i) => {
@@ -6294,6 +6380,7 @@ auth.onAuthStateChanged(user => {
   if (loading) loading.style.display = 'none';
 
   if (user) {
+    renderAppSettingsSession();
     if (loginOverlay) loginOverlay.style.display = 'none';
     if (appLayout)    appLayout.style.display    = 'block';
     startFirebaseListeners();
