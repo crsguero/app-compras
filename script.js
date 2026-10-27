@@ -252,8 +252,14 @@ function saveLastShoppingList() {
 // FUNCIONES UTILITARIAS
 // -----------------------
 
+// "YYYY-MM-DD" -> Date a medianoche LOCAL. Importante no usar
+// `new Date('YYYY-MM-DD')`: eso la interpreta como medianoche UTC, la deja a
+// las 01:00/02:00 locales y, al avanzar días con addDays (que conserva la hora
+// local), un cambio de horario de verano desplaza el instante una hora.
 function parseISODate(dateString) {
-  const [y, m, d] = dateString.split('-').map(Number);
+  if (!dateString) return new Date(NaN);
+  const [y, m, d] = String(dateString).split('-').map(Number);
+  if (!y || !m || !d) return new Date(NaN);
   return new Date(y, m - 1, d);
 }
 
@@ -362,7 +368,7 @@ function endOfWeekSunday(date) {
 }
 
 function getWeekdayName(dateString) {
-  const date = new Date(dateString);
+  const date = parseISODate(dateString);
 
   return date.toLocaleDateString('es-ES', {
     weekday: 'long',
@@ -1517,12 +1523,12 @@ function renderConsumablesTable(raw) {
   table.className = 'ingredient-table';
 
   const COLS = [
+    { key: 'active',      label: 'Activo',          sortable: false },
     { key: 'name',        label: 'Nombre',          sortable: true  },
     { key: 'minQuantity', label: 'Cantidad mínima', sortable: false },
     { key: 'location',    label: 'Ubicación',       sortable: true  },
     { key: 'store',       label: 'Comercio',        sortable: true  },
     { key: 'product',     label: 'Producto',        sortable: false },
-    { key: 'active',      label: 'Activo',          sortable: false },
   ];
 
   const thead = document.createElement('thead');
@@ -1557,26 +1563,6 @@ function renderConsumablesTable(raw) {
     const tr = document.createElement('tr');
     tr.dataset.id = consumable.id;
 
-    const nameTd = document.createElement('td');
-    nameTd.textContent = consumable.name;
-    tr.appendChild(nameTd);
-
-    const minQtyTd = document.createElement('td');
-    minQtyTd.textContent = consumable.minQuantity || '';
-    tr.appendChild(minQtyTd);
-
-    const locTd = document.createElement('td');
-    locTd.textContent = settingsLabel('shared-location', consumable.location);
-    tr.appendChild(locTd);
-
-    const storeTd = document.createElement('td');
-    storeTd.textContent = settingsLabel('shared-store', consumable.store);
-    tr.appendChild(storeTd);
-
-    const productTd = document.createElement('td');
-    productTd.textContent = consumable.product || '';
-    tr.appendChild(productTd);
-
     // Los consumibles creados antes de existir este campo no tienen `active`:
     // se consideran activos, sin tocar el registro guardado.
     const isActive = consumable.active !== false;
@@ -1598,6 +1584,26 @@ function renderConsumablesTable(raw) {
     switchLabel.appendChild(switchTrack);
     activeTd.appendChild(switchLabel);
     tr.appendChild(activeTd);
+
+    const nameTd = document.createElement('td');
+    nameTd.textContent = consumable.name;
+    tr.appendChild(nameTd);
+
+    const minQtyTd = document.createElement('td');
+    minQtyTd.textContent = consumable.minQuantity || '';
+    tr.appendChild(minQtyTd);
+
+    const locTd = document.createElement('td');
+    locTd.textContent = settingsLabel('shared-location', consumable.location);
+    tr.appendChild(locTd);
+
+    const storeTd = document.createElement('td');
+    storeTd.textContent = settingsLabel('shared-store', consumable.store);
+    tr.appendChild(storeTd);
+
+    const productTd = document.createElement('td');
+    productTd.textContent = consumable.product || '';
+    tr.appendChild(productTd);
 
     tr.style.cursor = 'pointer';
     tr.addEventListener('click', (e) => {
@@ -3595,17 +3601,17 @@ calendarEntries.forEach((entry) => {
     return;
   }
 
-  const start = new Date(entry.startDate);
+  const start = parseISODate(entry.startDate);
   if (Number.isNaN(start.getTime())) return; // seguridad
 
-  const realEnd = start > end ? start : end;
+  const realEnd = toISODateString(start > end ? start : end);
   const excluded = Array.isArray(entry.excludedDates) ? entry.excludedDates : [];
 
   if (entry.repeat === 'weekly' && Array.isArray(entry.days) && entry.days.length > 0) {
     entry.days.forEach(dow => {
       const diff = (dow - start.getDay() + 7) % 7;
       const firstOcc = addDays(start, diff);
-      for (let d = new Date(firstOcc); d <= realEnd; d = addDays(d, 7)) {
+      for (let d = new Date(firstOcc); toISODateString(d) <= realEnd; d = addDays(d, 7)) {
         const iso = toISODateString(d);
         if (entry.until && iso >= entry.until) break;
         if (excluded.includes(iso)) continue;
@@ -3614,7 +3620,7 @@ calendarEntries.forEach((entry) => {
     });
   } else {
     const step = entry.repeat === 'weekly' ? 7 : 1;
-    for (let d = new Date(start); d <= realEnd; d = addDays(d, step)) {
+    for (let d = new Date(start); toISODateString(d) <= realEnd; d = addDays(d, step)) {
       const iso = toISODateString(d);
       if (entry.until && iso >= entry.until) break;
       if (excluded.includes(iso)) continue;
@@ -3960,7 +3966,6 @@ function generateShoppingList(startDate, endDate) {
 }
 
 function getExpandedCalendarEntriesInRange(startDate, endDate) {
-  const endLimit = new Date(endDate);
   const expanded = [];
 
   calendarEntries.forEach((entry) => {
@@ -3975,7 +3980,7 @@ function getExpandedCalendarEntriesInRange(startDate, endDate) {
     }
 
     // daily/weekly -> expandir desde startDate de la regla
-    const start = new Date(entry.startDate);
+    const start = parseISODate(entry.startDate);
     if (Number.isNaN(start.getTime())) return;
 
     const excluded = Array.isArray(entry.excludedDates) ? entry.excludedDates : [];
@@ -3984,7 +3989,7 @@ function getExpandedCalendarEntriesInRange(startDate, endDate) {
       entry.days.forEach(dow => {
         const diff = (dow - start.getDay() + 7) % 7;
         const firstOcc = addDays(start, diff);
-        for (let d = new Date(firstOcc); d <= endLimit; d = addDays(d, 7)) {
+        for (let d = new Date(firstOcc); toISODateString(d) <= endDate; d = addDays(d, 7)) {
           const iso = toISODateString(d);
           if (entry.until && iso >= entry.until) break;
           if (iso < startDate) continue;
@@ -3994,7 +3999,7 @@ function getExpandedCalendarEntriesInRange(startDate, endDate) {
       });
     } else {
       const step = repeat === 'weekly' ? 7 : 1;
-      for (let d = new Date(start); d <= endLimit; d = addDays(d, step)) {
+      for (let d = new Date(start); toISODateString(d) <= endDate; d = addDays(d, step)) {
         const iso = toISODateString(d);
         if (entry.until && iso >= entry.until) break;
         if (iso < startDate) continue;
@@ -4866,6 +4871,9 @@ const lista2ItemsContainer = document.getElementById('lista2ItemsContainer');
 const lista2ShopViewEl = document.getElementById('lista2ShopView');
 const lista2ShopList = document.getElementById('lista2ShopList');
 let currentLista2ItemId = null;
+// Comercios marcados en el filtro de "Editar cantidades". Vacío = sin filtrar.
+// No se guarda: cada vez que se abre la vista se empieza sin filtro.
+let _lista2ShopStores = new Set();
 
 function showLista2Detail() {
   lista2DetailView?.classList.add('is-visible');
@@ -4883,11 +4891,15 @@ function hideLista2Detail() {
 }
 
 function openLista2ShopView(item) {
+  _lista2ShopStores = new Set();
+  document.getElementById('lista2ShopFilterDropdown')?.classList.add('hidden');
+  updateLista2ShopFilterBadge();
   renderLista2ShopList(item);
   lista2ShopViewEl?.classList.add('is-visible');
 }
 
 function closeLista2ShopView() {
+  document.getElementById('lista2ShopFilterDropdown')?.classList.add('hidden');
   lista2ShopViewEl?.classList.remove('is-visible');
   const item = lista2Items.find((i) => i.id === currentLista2ItemId);
   if (item) renderLista2DetailList(item);
@@ -5342,6 +5354,105 @@ document.getElementById('lista2ShopModeBtn')?.addEventListener('click', () => {
 
 document.getElementById('closeLista2ShopView')?.addEventListener('click', closeLista2ShopView);
 
+// Comercios que se pueden filtrar: solo los que tiene algún ingrediente de la
+// lista, en el orden configurado en Ajustes. El "Sin comercio" va al final.
+function lista2ShopStoreOptions(item) {
+  const present = new Set(item.ingredientNames.map((name) => lista2StoreKeyOf(item, name)));
+  const opts = settingsOptions('shared-store', [...present])
+    .filter(({ value }) => present.has(value));
+  if (present.has('')) opts.push({ value: '', label: 'Sin comercio' });
+  return opts;
+}
+
+function updateLista2ShopFilterBadge() {
+  const btn = document.getElementById('openLista2ShopFilter');
+  const badge = document.getElementById('lista2ShopFilterBadge');
+  if (!btn || !badge) return;
+  const count = _lista2ShopStores.size;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.remove('hidden');
+    btn.classList.add('is-active');
+  } else {
+    badge.classList.add('hidden');
+    btn.classList.remove('is-active');
+  }
+}
+
+function renderLista2ShopFilterPanel(item) {
+  const container = document.getElementById('lista2ShopFilterContent');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const section = document.createElement('div');
+  section.className = 'filter-section';
+  const title = document.createElement('div');
+  title.className = 'filter-section-title';
+  title.textContent = 'Comercio';
+  section.appendChild(title);
+
+  const opts = lista2ShopStoreOptions(item);
+  if (opts.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'filter-option';
+    empty.textContent = 'No hay comercios.';
+    section.appendChild(empty);
+  }
+
+  opts.forEach(({ value: key, label }) => {
+    const opt = document.createElement('label');
+    opt.className = 'filter-option';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = key;
+    cb.checked = _lista2ShopStores.has(key);
+    cb.addEventListener('change', () => {
+      if (cb.checked) _lista2ShopStores.add(key);
+      else _lista2ShopStores.delete(key);
+      renderLista2ShopList(item);
+      updateLista2ShopFilterBadge();
+    });
+    opt.appendChild(cb);
+    opt.appendChild(document.createTextNode(label));
+    section.appendChild(opt);
+  });
+
+  container.appendChild(section);
+}
+
+const lista2ShopFilterBtn = document.getElementById('openLista2ShopFilter');
+const lista2ShopFilterDropdown = document.getElementById('lista2ShopFilterDropdown');
+
+if (lista2ShopFilterBtn && lista2ShopFilterDropdown) {
+  lista2ShopFilterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (lista2ShopFilterDropdown.classList.contains('hidden')) {
+      const item = lista2Items.find((i) => i.id === currentLista2ItemId);
+      if (!item) return;
+      renderLista2ShopFilterPanel(item);
+      lista2ShopFilterDropdown.classList.remove('hidden');
+    } else {
+      lista2ShopFilterDropdown.classList.add('hidden');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!lista2ShopFilterDropdown.classList.contains('hidden') && !lista2ShopFilterDropdown.contains(e.target)) {
+      lista2ShopFilterDropdown.classList.add('hidden');
+    }
+  });
+}
+
+document.getElementById('clearLista2ShopFilters')?.addEventListener('click', () => {
+  _lista2ShopStores = new Set();
+  const item = lista2Items.find((i) => i.id === currentLista2ItemId);
+  if (item) {
+    renderLista2ShopList(item);
+    renderLista2ShopFilterPanel(item);
+  }
+  updateLista2ShopFilterBadge();
+});
+
 // Texto de cantidad de una fila, compartido por la vista por tipo y la vista
 // por comercio. Un consumible no tiene unidad ni conversión: solo su cantidad
 // mínima, o la cantidad que se le haya puesto a mano.
@@ -5393,8 +5504,11 @@ function formatIngredientQty(ingredient, rawQty) {
   if (rawQty == null || isNaN(rawQty)) return null;
   const formato = parseFloat(ingredient.formato);
   if (ingredient.productUnit && ingredient.formato != null && ingredient.formato !== '' && formato > 0) {
-    const converted = rawQty / formato;
-    const display = parseFloat(converted.toFixed(2));
+    // En el supermercado solo se compran unidades enteras del formato: 1 g de un
+    // bote de 100 g sigue siendo 1 bote. El toFixed absorbe el ruido de coma
+    // flotante para que 3 × 0,1 / 0,1 no acabe siendo 4.
+    const converted = parseFloat((rawQty / formato).toFixed(6));
+    const display = Math.ceil(converted);
     const labels = PRODUCT_UNIT_LABELS[ingredient.productUnit];
     const unitLabel = labels ? (display === 1 ? labels.singular : labels.plural) : ingredient.productUnit;
     return `${display} ${unitLabel}`;
@@ -5735,6 +5849,19 @@ function renderLista2ShopList(item) {
     return;
   }
 
+  // El filtro de comercio solo esconde filas: no toca las cantidades ni el
+  // progreso de la lista. Sin comercios marcados se ven todas.
+  const visibleNames = _lista2ShopStores.size > 0
+    ? item.ingredientNames.filter((name) => _lista2ShopStores.has(lista2StoreKeyOf(item, name)))
+    : item.ingredientNames;
+
+  if (visibleNames.length === 0) {
+    const p = document.createElement('p');
+    p.textContent = 'No hay nada de los comercios seleccionados.';
+    lista2ShopList.appendChild(p);
+    return;
+  }
+
   // El mapa de cantidades sale del calendario y del rango de fechas: en una
   // lista mensual no hay ni una cosa ni la otra.
   const totalQtyByIngredient = isLista2Mensual(item) ? new Map() : buildTotalQtyMap(item);
@@ -5745,7 +5872,7 @@ function renderLista2ShopList(item) {
 
   const locationKeyOf = (name) => findLista2Record(item, name)?.location || 'sin-ubicacion';
 
-  const sorted = [...item.ingredientNames].sort((a, b) => {
+  const sorted = [...visibleNames].sort((a, b) => {
     const iA = locationOrder.indexOf(locationKeyOf(a));
     const iB = locationOrder.indexOf(locationKeyOf(b));
     const oA = iA === -1 ? 999 : iA;

@@ -1880,17 +1880,7 @@ select:has(option[value=""]:checked) {
 }
 
 #calendarList .calendar-recipe-row.is-no-ingredients {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-
-  margin: 0 0 6px 0;
-  padding: 4px 8px 4px 11px;
   background-color: #F3F3F3;
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
 }
 
 .calendar-recipe-row.is-no-ingredients::before {
@@ -3683,6 +3673,21 @@ label.toggle input[type="checkbox"]:checked::after {
 
   .ingredient-table td:last-child {
     padding-right: 12px;
+  }
+
+  /* En Consumibles la primera columna es el toggle Activo: se ajusta al
+     contenido y el énfasis del nombre pasa a la segunda columna. */
+  #consumableList .ingredient-table th:first-child,
+  #consumableList .ingredient-table td:first-child {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  #consumableList .ingredient-table td:nth-child(2) {
+    font-size: 15px;
+    line-height: 25px;
+    font-weight: 500;
+    color: var(--color-primary);
   }
 
 
