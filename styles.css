@@ -7,6 +7,11 @@
   --brand-primary: #FFC900;
   --danger: #F2474F;
   --danger-ui: #FFF3F3;
+
+  /* Niveles de navegación: rail (nivel superior) + barra lateral de la sección */
+  --rail-width: 80px;
+  --nav-width: 270px;
+  --nav-offset: calc(var(--rail-width) + var(--nav-width));
 }
 
 body {
@@ -30,6 +35,7 @@ h2 {
 #ingredients .header h2,
 #consumables .header h2,
 #recipes .header h2,
+#cocinados .header h2,
 #planning .header h2 {
   font-size: 24px;
   line-height: 32px;
@@ -167,6 +173,21 @@ li {
   flex-shrink: 0;
 }
 
+/* Variante para los pies con una acción destructiva: va en su propia fila,
+   encima de Cancelar y Guardar, para no pulsarla sin querer. Las dos de abajo
+   van dentro de un `.modal-actions-row`. */
+.modal-actions--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* `inherit` copia el gap del pie, que cada modal ajusta por su cuenta: así la
+   separación entre Cancelar y Guardar no se queda atrás si allí cambia. */
+.modal-actions--stacked .modal-actions-row {
+  display: flex;
+  gap: inherit;
+}
+
 #planning > li {
   margin-bottom: 12px;
 }
@@ -191,6 +212,82 @@ li {
 
 /* Navigation */
 
+/* ── Rail: nivel superior de navegación (General / Compras / Cocina) ── */
+.rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--rail-width);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 32px 8px 24px 8px;
+  box-sizing: border-box;
+  background: var(--color-quaternary);
+  border-right: 1px solid var(--color-tertiary);
+  font-family: 'Inter', sans-serif;
+  /* Con una sección por categoría, en pantallas bajas hay que poder bajar */
+  overflow-y: auto;
+  z-index: 999;
+}
+
+/* Separa General del resto de secciones. Los 4px de margen se suman al `gap`
+   del rail, así que quedan 8px a cada lado de la línea. */
+.rail-divider {
+  flex: none;
+  height: 1px;
+  margin: 4px;
+  background-color: var(--color-tertiary);
+}
+
+.rail-btn {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 4px;
+  margin: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background-color: transparent;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+}
+
+.rail-btn svg {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.rail-btn p {
+  color: var(--color-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.rail-btn:hover {
+  background-color: #fff;
+}
+
+.rail-btn.active {
+  background: #fff;
+}
+
+.rail-btn.active svg,
+.rail-btn.active p {
+  color: var(--color-primary);
+}
+
 .nav-logo {
   display: flex;
   align-items: center;
@@ -213,8 +310,8 @@ li {
 .tabs {
   position: fixed;
   top: 0;
-  left: 0;
-  width: 100%;
+  left: var(--rail-width);
+  width: calc(100% - var(--rail-width));
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -225,6 +322,12 @@ li {
   background: var(--color-quinary);
   font-family: 'Inter', sans-serif;
   z-index: 999;
+}
+
+/* Barra de la sección del rail que no está activa. Especificidad por encima de
+   `.tabs` para ganar al `display: flex` del bloque anterior. */
+nav.tabs[hidden] {
+  display: none;
 }
 
 .tab-btn-group {
@@ -468,6 +571,34 @@ input::placeholder {
   outline: none;
 }
 
+/* MONTH YEAR FIELD COMPONENT */
+
+/* Dos .select-field en la misma línea, mes y año, bajo una sola etiqueta. */
+.month-year-field {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.month-year-field .select-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.month-year-field select {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+label:has(+ .month-year-field) {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
 .text-input {
   flex: none;
   width: 100%;
@@ -502,6 +633,168 @@ label:has(+ .text-input) {
   border-color: var(--brand-primary);
   box-shadow: inset 0 0 0 1px var(--brand-primary);
   outline: none;
+}
+
+/* ── Tooltip ── */
+/* El globo es un único nodo colgado de <body>, no un hijo del elemento al que
+   acompaña: dentro de la celda lo recortaría el `overflow` de
+   `.week-table-wrapper`. Lo coloca `showTooltip()` con `position: fixed`. */
+.tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  /* Que no se interponga: si el puntero lo tocara, el hover se cortaría. */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tooltip.is-visible {
+  opacity: 1;
+}
+
+/* ── Editor de texto con formato (negrita, cursiva, listas) ── */
+.rich-text {
+  width: 100%;
+  background-color: var(--color-quinary);
+  border: 1px solid var(--color-tertiary);
+  border-radius: 8px;
+  box-sizing: border-box;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+label:has(+ .rich-text) {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+.rich-text:focus-within {
+  background-color: white;
+  border-color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--brand-primary);
+}
+
+.rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-tertiary);
+}
+
+.rich-text-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.rich-text-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rich-text-btn:hover {
+  background-color: var(--color-tertiary);
+  color: var(--color-primary);
+}
+
+/* Estado del comando en la posición del cursor: el botón queda marcado
+   mientras se escribe en negrita, cursiva o dentro de una lista. */
+.rich-text-btn.is-active {
+  background-color: var(--brand-primary);
+  color: var(--color-primary);
+}
+
+.rich-text-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background-color: var(--color-tertiary);
+  flex: none;
+}
+
+.rich-text-editor {
+  min-height: 120px;
+  padding: 12px;
+  box-sizing: border-box;
+  color: var(--color-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.rich-text-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-secondary);
+  pointer-events: none;
+}
+
+/* Las reglas siguientes valen tanto para el editor como para `.rich-text-content`,
+   que muestra un texto ya guardado fuera de un editor (la tabla de Cocinados).
+   El tamaño se hereda del contenedor, que es quien lo fija. */
+.rich-text-editor ul,
+.rich-text-content ul,
+.rich-text-editor ol,
+.rich-text-content ol {
+  margin: 0 0 8px;
+  padding-left: 24px;
+}
+
+.rich-text-editor ul,
+.rich-text-content ul {
+  list-style: disc;
+}
+
+.rich-text-editor ol,
+.rich-text-content ol {
+  list-style: decimal;
+}
+
+/* Las reglas globales de `li` lo ponen en flex con borde inferior: aquí tiene
+   que volver a comportarse como un elemento de lista normal. */
+.rich-text-editor li,
+.rich-text-content li {
+  display: list-item;
+  padding: 0;
+  border-bottom: none;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.rich-text-editor p,
+.rich-text-content p {
+  margin: 0 0 8px;
+}
+
+.rich-text-editor > *:last-child,
+.rich-text-content > *:last-child {
+  margin-bottom: 0;
 }
 
 .number-input {
@@ -1172,8 +1465,12 @@ select:has(option[value=""]:checked) {
   background: var(--danger-ui);
 }
 
+/* Dos niveles en Editar cantidades: la estancia es el título de la sección y
+   dentro van subgrupos por ubicación. La estancia va grande y oscura; la
+   ubicación, pequeña, gris y en mayúsculas, para que no se confunda ni con la
+   estancia ni con el nombre de un consumible (16px, peso normal). */
 .lista2-shop-location-header {
-  padding: 8px 0;
+  padding: 16px 0 4px;
   font-size: 18px;
   line-height: 24px;
   font-weight: 600;
@@ -1184,6 +1481,31 @@ select:has(option[value=""]:checked) {
 
 .lista2-shop-location-header:first-child {
   padding-top: 8px;
+}
+
+.lista2-shop-sublocation-header {
+  /* El espacio por arriba lo pone el margen del último elemento del subgrupo
+     anterior; aquí solo hace falta separarlo de sus propios elementos. */
+  padding: 0 0 4px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9C9894;
+  list-style: none;
+  border-bottom: none;
+}
+
+/* Primer subgrupo de una estancia: bajo su título, pero sin pegarse a él. */
+.lista2-shop-location-header + .lista2-shop-sublocation-header {
+  padding-top: 22px;
+}
+
+/* Subgrupo siguiente: se suma al margen que ya deja el último elemento del
+   anterior, para que se note el cambio de ubicación. */
+.lista2-shop-item + .lista2-shop-sublocation-header {
+  padding-top: 12px;
 }
 
 .lista2-shop-pantry-section {
@@ -1254,6 +1576,32 @@ select:has(option[value=""]:checked) {
   font-size: 16px;
   font-weight: 400;
   margin-bottom: 2px;
+}
+
+/* Debajo del nombre: la cantidad y, separado por un punto, el aviso de
+   caducado. */
+.lista2-shop-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lista2-shop-meta-separator {
+  flex: none;
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--color-secondary);
+}
+
+/* Aviso de caducado: el mismo rojo que la columna «Caducidad» de las tablas,
+   pero sin la alarma. */
+.lista2-shop-expired {
+  flex: none;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--danger);
 }
 
 .lista2-shop-input {
@@ -1531,6 +1879,42 @@ select:has(option[value=""]:checked) {
 
 .lista2-sheet-pantry-info.lista2-sheet-pantry-empty {
   color: #9C9894;
+}
+
+/* Copiar el comentario, justo debajo de su texto. */
+.lista2-sheet-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Es flex, así que el atributo hidden por sí solo no lo esconde. */
+.lista2-sheet-copy-btn[hidden] {
+  display: none;
+}
+
+.lista2-sheet-copy-btn svg {
+  flex: none;
+}
+
+.lista2-sheet-copy-btn:hover {
+  text-decoration: underline;
+}
+
+/* Mientras avisa de que ya está copiado no hay nada que pulsar. */
+.lista2-sheet-copy-btn.is-copied {
+  color: var(--color-secondary);
+  text-decoration: none;
 }
 
 .lista2-sheet-recipes {
@@ -2095,7 +2479,387 @@ select:has(option[value=""]:checked) {
   justify-content: center;
 }
 
-/* COCINADOS */
+/* COCINADOS: tabla semanal de ingestas */
+
+#cocinados .header {
+  width: calc(100vw - 48px);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 24px;
+  padding-top: 24px;
+  position: fixed;
+  top: 0;
+  background-color: white;
+  z-index: 99;
+}
+
+/* El contenido queda bajo la cabecera fija y la tabla se desplaza en
+   horizontal cuando los siete días no caben. */
+.week-table-wrapper {
+  margin-top: 112px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.week-table {
+  width: 100%;
+  min-width: 840px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: 'Inter', sans-serif;
+}
+
+.week-table th,
+.week-table td {
+  border: 1px solid #EBEBEB;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+/* Cabeceras de columna: los días de la semana. */
+.week-table thead th {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background-color: var(--color-quinary);
+  white-space: nowrap;
+}
+
+.week-table tbody td {
+  height: 96px;
+  background-color: #fff;
+}
+
+/* Cabecera de la celda: el nombre de la ingesta y, si la admite recetas, el
+   botón de añadir en la misma línea. */
+.week-cell-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Mismo tratamiento que las ingestas de Planificación
+   (`.calendar-meal-group-label`). */
+.week-cell-title {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9C9894;
+}
+
+/* Mismo botón que Planificación (`.calendar-meal-add-btn`): sin fondo ni borde
+   y oculto hasta pasar por la celda. Los 16px de alto son el alto de línea del
+   título, para que el icono quede centrado con su primera línea. */
+.week-cell-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  border: none;
+  background: none;
+  color: #C5C3BF;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms, color 150ms;
+}
+
+.week-cell-add-btn:hover {
+  color: #3C3A37;
+}
+
+/* Con teclado no hay puntero que descubra el botón. */
+.week-cell-add-btn:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .week-table tbody td:hover .week-cell-add-btn {
+    opacity: 1;
+  }
+}
+
+/* En táctil no hay hover que lo saque: ahí se queda siempre a la vista. */
+@media (hover: none) {
+  .week-cell-add-btn {
+    opacity: 1;
+  }
+}
+
+.week-cell-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Las reglas globales de `li` lo ponen en flex con borde inferior y separación
+   entre extremos: aquí el nombre y su byline van en columna, pegados arriba. */
+.week-cell-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: none;
+  border-radius: 6px;
+  /* El mismo amarillo que las recetas de Planificación (`.calendar-recipe-row`). */
+  background-color: #FFF8D1;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+/* El nombre es solo texto: quien recoge el click es la caja. */
+.week-cell-entry-name {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+/* El cursor es la única señal de que la ingesta se puede editar, y cambia en
+   toda la caja porque es toda la caja la que abre el modal. */
+.week-cell-entry.is-editable {
+  cursor: pointer;
+}
+
+.week-cell-entry-missing {
+  color: var(--color-secondary);
+  font-style: italic;
+}
+
+/* Debajo del nombre, y solo en las raciones desde las que se edita la ingesta.
+   El amarillo es el que usa Planificación para el texto pequeño sobre este
+   mismo fondo (`.calendar-recipe-row .calendar-meal`): el de marca no se leería. */
+.week-cell-entry-byline {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: #D9A800;
+}
+
+/* ── Notas de preparación de la noche anterior (celda 'Por la noche') ── */
+.week-cell-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Las dos listas solo se añaden a la celda si llevan algo, así que el selector
+   de hermano adyacente separa las notas de las ingestas justo cuando conviven. */
+.week-cell-list + .week-cell-notes {
+  margin-top: 8px;
+}
+
+/* Las reglas globales de `li` lo ponen en flex horizontal con borde inferior. */
+.week-cell-note {
+  display: block;
+  padding: 8px;
+  border-bottom: none;
+  border-radius: 6px;
+  background-color: var(--color-quinary);
+  /* La nota no dice de qué receta es: el cursor avisa de que hay tooltip. */
+  cursor: help;
+}
+
+/* De qué receta sale la nota. Solo se pinta en la vista de móvil, donde no hay
+   hover que saque el tooltip: mismo trato que el título de la celda. */
+.week-cell-note-source {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9C9894;
+}
+
+.week-cell-note-body {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+/* ── Cocinados en móvil: días → ingestas → contenido de la celda ──
+   Los siete días de la tabla no caben en el ancho de un teléfono, así que ahí
+   los mismos datos se recorren como un menú de tres niveles. La tabla y esta
+   vista se pintan las dos siempre: cuál se ve lo decide el ancho de pantalla,
+   de modo que girar el teléfono no deja nada sin montar. */
+#cocinados .week-table-wrapper {
+  display: none;
+}
+
+.cocinados-mobile {
+  margin-top: 112px;
+  height: calc(100vh - 112px);
+  padding-bottom: 24px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.cocinados-mobile::-webkit-scrollbar {
+  display: none;
+}
+
+/* Las reglas globales de `li` ya ponen la fila en flex con el contenido
+   separado a los extremos y un borde inferior: aquí solo cambia el espacio. */
+.cocinados-mobile-row {
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.cocinados-mobile-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Mismo tamaño que el nombre de las recetas en móvil (`.recipe-row`). */
+.cocinados-mobile-row-name {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Lo que hay dentro, en una sola línea: si no cabe, se corta. */
+.cocinados-mobile-row-summary {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cocinados-mobile-row-icon {
+  display: flex;
+  flex: none;
+  color: var(--color-primary);
+}
+
+/* El botón de volver y dónde se está. Se queda arriba al desplazar, pegado al
+   borde del propio contenedor que se desplaza. */
+.cocinados-mobile-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 16px;
+  background-color: white;
+}
+
+.cocinados-mobile-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.cocinados-mobile-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* La celda trae las mismas listas que en la tabla, pero con todo el ancho de la
+   pantalla: sus cajas se ensanchan para poder pulsarlas con el dedo. */
+.cocinados-mobile-cell .week-cell-entry {
+  padding: 10px 12px;
+}
+
+.cocinados-mobile-cell .week-cell-note {
+  padding: 12px;
+  /* Aquí la nota ya dice de qué receta es: no hay tooltip que anunciar. */
+  cursor: default;
+}
+
+.cocinados-mobile-empty {
+  margin: 0;
+  padding: 16px 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: #C9C9C9;
+  text-align: center;
+}
+
+.cocinados-mobile-add {
+  width: 100%;
+  margin-top: 16px;
+  cursor: pointer;
+}
+
+/* Contexto (ingesta y día) sobre el selector del modal de añadir receta. */
+.field-helper-top {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-secondary);
+  margin: 0 0 16px;
+}
+
+/* ── Modal 'Añadir receta': reparto de raciones por días ── */
+#cocinadoServingsSection {
+  margin-top: 24px;
+}
+
+.cocinado-serving-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cocinado-serving-row:last-child {
+  margin-bottom: 0;
+}
+
+.cocinado-serving-label {
+  flex: none;
+  width: 84px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+.cocinado-serving-day {
+  flex: 1;
+  min-width: 0;
+}
+
+/* RECETAS */
 
 #recipes .header {
   width: calc(100vw - 48px);
@@ -2211,7 +2975,16 @@ select:has(option[value=""]:checked) {
   margin-bottom: 12px;
 }
 
-#recipeForm p {
+/* La sección 'Cocinado' va justo detrás del botón de añadir ingrediente, que no
+   reserva margen inferior: la separación se da aquí. */
+#recipeForm .form-section-label,
+#calendarRecipeEditForm .form-section-label {
+  margin-top: 32px;
+}
+
+/* Solo los párrafos escritos directamente en el formulario: los que genera el
+   editor de 'Día anterior' llevan sus propios estilos. */
+#recipeForm > p {
   font-size: 14px;
   line-height: 20px;
   color: #414651;
@@ -2288,13 +3061,15 @@ select:has(option[value=""]:checked) {
     background: white;
   }
 
-  .tabs.nav-hidden {
+  .tabs.nav-hidden,
+  .rail.nav-hidden {
     display: none;
   }
 
   #shopping-list-2 .header,
   #planning .header,
   #recipes .header,
+  #cocinados .header,
   #consumables .header,
   #ingredients .header {
     align-items: center;
@@ -2303,6 +3078,7 @@ select:has(option[value=""]:checked) {
   #ingredients .header,
   #consumables .header,
   #recipes .header,
+  #cocinados .header,
   #planning .header {
     width: calc(100vw - 48px);
     position: fixed;
@@ -2315,6 +3091,7 @@ select:has(option[value=""]:checked) {
   #ingredients .header-title-row,
   #consumables .header-title-row,
   #recipes .header-title-row,
+  #cocinados .header-title-row,
   #planning .header-title-row {
     display: flex;
     align-items: center;
@@ -2344,7 +3121,9 @@ select:has(option[value=""]:checked) {
 }
 
 #ingredients .header .primary-btn,
-#consumables .header .primary-btn {
+#consumables .header .primary-btn,
+.utensilios-tab .header .primary-btn,
+.consumibles-tab .header .primary-btn {
   background-color: #FFC900;
   border-radius: 20px;
   height: 40px;
@@ -2353,7 +3132,9 @@ select:has(option[value=""]:checked) {
 }
 
 #ingredients .header .primary-btn svg,
-#consumables .header .primary-btn svg {
+#consumables .header .primary-btn svg,
+.utensilios-tab .header .primary-btn svg,
+.consumibles-tab .header .primary-btn svg {
   color: white;
 }
 
@@ -2566,6 +3347,31 @@ select:has(option[value=""]:checked) {
   border-radius: 8px;
 }
 
+/* Lista repartida en secciones (Ubicaciones: una sección por estancia). Cada
+   sección lleva su título, sus filas y su propio botón de añadir, y las filas
+   se arrastran de una sección a otra para cambiarles la estancia. */
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section-title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #9C9894;
+}
+
+/* Alto mínimo para que una sección vacía siga siendo un destino al arrastrar. */
+.settings-section .settings-list {
+  min-height: 24px;
+}
+
 .settings-row-count {
   flex: none;
   font-size: 12px;
@@ -2763,10 +3569,41 @@ select:has(option[value=""]:checked) {
   text-decoration: underline;
 }
 
-#ingredientList,
-#consumableList {
+#ingredientList {
   margin-top: 136px;
   margin-bottom: 56px;
+}
+
+/* En Consumibles el hueco de la cabecera fija lo reserva la barra de pestañas,
+   que va por encima de las dos vistas. */
+#consumableViewTabs {
+  margin-top: 136px;
+}
+
+#consumableList,
+#consumableRoomGroups {
+  margin-bottom: 56px;
+}
+
+/* Vista «Por ubicación»: una tabla por estancia, cada una con su título.
+   El :not([hidden]) deja que `hidden` siga ocultando el contenedor. */
+#consumableRoomGroups:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.consumable-room-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.consumable-room-empty {
+  margin: 0;
+  color: #717680;
 }
 
 .ingredient-row {
@@ -2831,11 +3668,20 @@ select:has(option[value=""]:checked) {
   margin: 0 0 6px;
 }
 
-#ingredientUsedInRecipes {
+/* «Usado en» (Editar ingrediente) y las secciones Utensilios y Consumibles
+   (Editar tarea) comparten estilos: lista de filas con icono y nombre, y sin
+   hueco cuando no hay nada que enseñar. */
+#ingredientUsedInRecipes,
+#utensilUsedInTareas,
+#consumableUsedInTareas,
+.tarea-used {
   margin-bottom: 24px;
 }
 
-#ingredientUsedInRecipes:empty {
+#ingredientUsedInRecipes:empty,
+#utensilUsedInTareas:empty,
+#consumableUsedInTareas:empty,
+.tarea-used:empty {
   margin-bottom: 0;
 }
 
@@ -2845,13 +3691,15 @@ select:has(option[value=""]:checked) {
   margin: 0;
 }
 
-.ingredient-recipe-list {
+.ingredient-recipe-list,
+.tarea-used-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.ingredient-recipe-row {
+.ingredient-recipe-row,
+.tarea-used-row {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -2864,14 +3712,25 @@ select:has(option[value=""]:checked) {
   color: var(--color-primary);
 }
 
+/* El material ya no existe: queda el nombre con el que se guardó. */
+.tarea-used-row--missing {
+  color: var(--color-secondary);
+  text-decoration: line-through;
+}
+
 .ingredient-recipe-name {
   font-size: inherit;
   color: inherit;
 }
 
-.ingredient-recipe-icon {
+.ingredient-recipe-icon,
+.tarea-used-icon {
   flex-shrink: 0;
   color: var(--color-primary);
+}
+
+.tarea-used-row--missing .tarea-used-icon {
+  color: var(--color-secondary);
 }
 
 .ingredient-recipe-edit-btn {
@@ -3359,14 +4218,14 @@ label.toggle input[type="checkbox"]:checked::after {
    ════════════════════════════════════════ */
 @media (min-width: 768px) {
 
-  /* Deja espacio para la barra lateral (270px) + margen de contenido (24px) */
+  /* Deja espacio para el rail + la barra lateral + margen de contenido (24px) */
   body {
-    padding: 0 24px 24px calc(270px + 24px);
+    padding: 0 24px 24px calc(var(--nav-offset) + 24px);
   }
 
   /* ── Barra lateral (ancho fijo, ya no full-screen) ── */
   .tabs {
-    width: 270px;
+    width: var(--nav-width);
     box-sizing: border-box;
     height: 100vh;
     border-right: 1px solid var(--color-tertiary);
@@ -3391,7 +4250,7 @@ label.toggle input[type="checkbox"]:checked::after {
 
   /* ── Headers fijos: desplazarlos tras la barra lateral ── */
   #planning .header {
-    left: 270px;
+    left: var(--nav-offset);
     right: 0;
     width: auto;
     padding: 24px;
@@ -3418,7 +4277,7 @@ label.toggle input[type="checkbox"]:checked::after {
     align-items: center;
     position: fixed;
     top: 88px;
-    left: 294px;
+    left: calc(var(--nav-offset) + 24px);
     height: 36px;
     font-size: 20px;
     font-weight: 600;
@@ -3440,12 +4299,17 @@ label.toggle input[type="checkbox"]:checked::after {
   #shoppingTabByLocation,
   #ingredientList,
   #consumableList,
+  #consumableRoomGroups,
   #calendarList,
   #recipeList {
     margin-top: 0;
     margin-bottom: 0;
     height: auto;
     overflow-y: visible;
+  }
+
+  #consumableViewTabs {
+    margin-top: 0;
   }
 
   /* ── Planificación: grid de 7 columnas ── */
@@ -3677,17 +4541,59 @@ label.toggle input[type="checkbox"]:checked::after {
 
   /* En Consumibles la primera columna es el toggle Activo: se ajusta al
      contenido y el énfasis del nombre pasa a la segunda columna. */
-  #consumableList .ingredient-table th:first-child,
-  #consumableList .ingredient-table td:first-child {
+  .consumable-list .ingredient-table th:first-child,
+  .consumable-list .ingredient-table td:first-child {
     width: 1%;
     white-space: nowrap;
   }
 
-  #consumableList .ingredient-table td:nth-child(2) {
+  .consumable-list .ingredient-table td:nth-child(2) {
     font-size: 15px;
     line-height: 25px;
     font-weight: 500;
     color: var(--color-primary);
+  }
+
+  /* Vista por estancia: son varias tablas una debajo de otra y con el ancho
+     automático cada una repartía sus columnas según su propio contenido, así
+     que no cuadraban entre sí. Aquí el ancho es fijo y el mismo en todas.
+     Columnas: Activo, Nombre, Categoría, Cantidad mínima, Ubicación, Comercio
+     y Producto, que se queda con lo que sobre. */
+  #consumableRoomGroups .ingredient-table {
+    table-layout: fixed;
+  }
+
+  #consumableRoomGroups .ingredient-table th,
+  #consumableRoomGroups .ingredient-table td {
+    box-sizing: border-box;
+  }
+
+  #consumableRoomGroups .ingredient-table th:first-child,
+  #consumableRoomGroups .ingredient-table td:first-child {
+    width: 92px;
+  }
+
+  #consumableRoomGroups .ingredient-table th:nth-child(2) { width: 20%; } /* Nombre */
+  #consumableRoomGroups .ingredient-table th:nth-child(3) { width: 10%; } /* Categoría */
+  #consumableRoomGroups .ingredient-table th:nth-child(4) { width: 11%; } /* Cantidad mínima */
+  #consumableRoomGroups .ingredient-table th:nth-child(5) { width: 13%; } /* Ubicación */
+  /* La caducidad lleva el icono de alarma delante: necesita algo más de sitio. */
+  #consumableRoomGroups .ingredient-table th:nth-child(6) { width: 13%; } /* Caducidad */
+  #consumableRoomGroups .ingredient-table th:nth-child(7) { width: 11%; } /* Comercio */
+
+  /* Las cabeceras pueden partirse en dos líneas, igual en todas las tablas:
+     así «Cantidad mínima» no se corta cuando el panel de edición está abierto
+     y el espacio es menor. */
+  #consumableRoomGroups .ingredient-table th {
+    white-space: normal;
+  }
+
+  /* Un texto largo se recorta en lugar de ensanchar su columna o estirar la
+     fila; el valor completo se ve al abrir la fila. */
+  #consumableRoomGroups .ingredient-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
 
@@ -3711,6 +4617,42 @@ label.toggle input[type="checkbox"]:checked::after {
   .ingredient-table tbody tr:hover td,
   .ingredient-table tbody tr.is-selected td {
     background-color: var(--color-quinary);
+  }
+
+  /* Asa para reordenar la fila (tablas por estancia). Va en la celda del
+     toggle para no mover las columnas. Se queda tenue y se marca al pasar por
+     la fila; no se esconde del todo para que también se vea en pantallas
+     táctiles, donde no hay hover. */
+  .consumable-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 8px;
+    color: #E5E3DF;
+    line-height: 0;
+    cursor: grab;
+    transition: color 120ms ease;
+    /* Sin esto el navegador interpreta el gesto como scroll y no llega el
+       pointermove: es lo que hace que el arrastre funcione también en táctil. */
+    touch-action: none;
+  }
+
+  .ingredient-table tbody tr:hover .consumable-drag-handle,
+  .ingredient-table tbody tr.is-dragging .consumable-drag-handle {
+    color: #C7C4BF;
+  }
+
+  .consumable-drag-handle:hover {
+    color: #9C9894;
+  }
+
+  .consumable-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .ingredient-table tbody tr.is-dragging td {
+    background-color: var(--color-quinary);
+    opacity: 0.7;
   }
 
   .ingredient-delete-btn {
@@ -3864,6 +4806,32 @@ label.toggle input[type="checkbox"]:checked::after {
     top: 0;
     width: auto;
     padding-bottom: 24px;
+  }
+
+  #cocinados .header {
+    position: sticky;
+    top: 0;
+    width: auto;
+    padding-bottom: 24px;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  #cocinados .header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* Aquí los siete días caben: vuelve la tabla y se retira el menú de móvil. */
+  #cocinados .week-table-wrapper {
+    display: block;
+    margin-top: 0;
+  }
+
+  .cocinados-mobile {
+    display: none;
   }
 
   #recipes .header-title-row {
@@ -4099,8 +5067,8 @@ label.toggle input[type="checkbox"]:checked::after {
 
   /* ── Lista por comercio: panel en área de contenido (no overlay) ── */
   #storeShoppingModal {
-    left: 270px;
-    width: calc(100vw - 270px);
+    left: var(--nav-offset);
+    width: calc(100vw - var(--nav-offset));
     background: #fff;
     z-index: 100;
     align-items: flex-start;
@@ -4156,7 +5124,7 @@ label.toggle input[type="checkbox"]:checked::after {
 
   #lista2DetailView.is-visible,
   #lista2ShopView.is-visible {
-    left: 270px;
+    left: var(--nav-offset);
     right: 0;
     transition: right 0.25s ease;
   }
@@ -4447,6 +5415,433 @@ label.toggle input[type="checkbox"]:checked::after {
   width: 100%;
 }
 
+/* Pestaña «Tareas» de una sección del rail: los títulos que el Reparto tiene
+   en la pestaña de esa categoría */
+.tareas-tab .header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.tareas-tab .header h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Las listas de tareas se visten con la tabla del resto de pestañas
+   (.ingredient-table en escritorio, .ingredient-row en móvil): aquí solo va lo
+   propio de estas pestañas. */
+
+/* Pestaña «Consumibles» de una sección del rail: la tabla de Compras filtrada
+   por la categoría de la sección. La tabla ya se viste con .ingredient-table y
+   .consumable-list; aquí solo va la cabecera y la columna del panel. */
+.consumibles-tab .header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.consumibles-tab .header h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* El título a la izquierda y el botón de crear a la derecha */
+.consumibles-tab .header-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+/* Pestaña «Utensilios» de Limpieza: igual que la de Consumibles, pero con el
+   botón de crear en la cabecera. */
+.utensilios-tab .header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.utensilios-tab .header h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.utensilios-tab .header-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+/* Cada fila abre el panel de edición; se puede llegar con el tabulador. */
+.tareas-list tbody tr:focus-visible,
+.tareas-list .ingredient-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Compuesto porque, si no, gana el color de la primera columna de la tabla. */
+.tareas-list .tareas-item--untitled,
+.tareas-list td.tareas-item--untitled {
+  color: #9C9894;
+  font-style: italic;
+}
+
+.tareas-empty {
+  font-size: 14px;
+  line-height: 20px;
+  color: #9C9894;
+  margin: 0;
+}
+
+/* Panel lateral de tarea: reutiliza el de Ingredientes (.ingredient-edit-panel)
+   y aquí solo va lo propio */
+.tarea-panel h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.tarea-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+/* Etiqueta «Instrucciones» y botón «Ampliar» en la misma línea */
+.tarea-instr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tarea-instr-head .tarea-field-label {
+  margin-bottom: 0;
+}
+
+.tarea-instr-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--color-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.tarea-instr-expand-btn svg {
+  flex: none;
+}
+
+.tarea-instr-expand-btn:hover {
+  background-color: var(--color-tertiary);
+  color: var(--color-primary);
+}
+
+/* Quill reconoce las líneas de un HTML por el `display` calculado de cada
+   elemento: solo `block` y `list-item` cuentan. Como la regla global pone los
+   `li` en flex, al cargar un texto guardado se fundían todos los puntos de una
+   lista en uno solo. La conversión la hace en un contenedor oculto suyo
+   (.ql-clipboard), así que ahí también tiene que ser un elemento de lista. */
+.ql-clipboard li {
+  display: list-item;
+}
+
+/* El editor de Instrucciones (Quill, tema bubble): sin marco, sin fondo y sin
+   barra de formato fija, como el campo de descripción de App tareas. Quill
+   convierte el propio div en su contenedor; height:auto anula el 100% del core,
+   que aquí estiraría el panel. */
+#tareaInstrEditor.ql-container {
+  border: none;
+  height: auto;
+  margin-bottom: 24px;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-primary);
+}
+
+#tareaInstrEditor .ql-editor {
+  min-height: 120px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+#tareaInstrEditor .ql-editor.ql-blank::before {
+  left: 0;
+  right: 0;
+  font-style: normal;
+  color: var(--color-secondary);
+}
+
+/* Separaciones entre párrafos y listas */
+#tareaInstrEditor .ql-editor p + p,
+#tareaInstrEditor .ql-editor p + ol,
+#tareaInstrEditor .ql-editor p + ul,
+#tareaInstrEditor .ql-editor ol + p,
+#tareaInstrEditor .ql-editor ul + p {
+  margin-top: 16px;
+}
+
+#tareaInstrEditor .ql-editor li + li,
+#tareaInstrEditor .ql-editor ul[data-checked] + ul[data-checked] {
+  margin-top: 6px;
+}
+
+/* Las reglas globales de `li` lo ponen en flex, con relleno y borde inferior:
+   dentro del editor tiene que volver a ser un elemento de lista normal. */
+#tareaInstrEditor .ql-editor li {
+  display: list-item;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* El sangrado lo lleva el `li`, no la lista: así la viñeta o el número quedan
+   alineados con el texto de los párrafos. */
+#tareaInstrEditor .ql-editor ol,
+#tareaInstrEditor .ql-editor ul {
+  padding-left: 0;
+}
+
+#tareaInstrEditor .ql-editor ol li:not(.ql-direction-rtl),
+#tareaInstrEditor .ql-editor ul li:not(.ql-direction-rtl) {
+  padding-left: 2rem;
+}
+
+#tareaInstrEditor .ql-editor li:not(.ql-direction-rtl)::before {
+  text-align: left;
+  margin-left: -28px;
+  margin-right: 12px;
+}
+
+#tareaInstrEditor .ql-editor ol li:not(.ql-direction-rtl)::before {
+  margin-right: 9px;
+}
+
+/* Lista de casillas: la casilla de Quill se cambia por la de la app (.cb) */
+#tareaInstrEditor .ql-editor ul[data-checked] > li::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-secondary);
+  border-radius: 2px;
+  background: white;
+  vertical-align: middle;
+  margin-top: -4px;
+  cursor: pointer;
+}
+
+#tareaInstrEditor .ql-editor ul[data-checked="true"] > li::before {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23fff' d='M6.2 12.2 2.7 8.7l1.1-1.1 2.4 2.4 6-6 1.1 1.1z'/%3E%3C/svg%3E") no-repeat center / 12px;
+}
+
+/* Instrucciones ampliadas: el editor del panel se mueve dentro del modal, así
+   que aquí solo se le da todo el alto disponible.
+   El diálogo lleva las dos clases porque los estilos de `.rp-modal-dialog`
+   están más abajo en el archivo y si no ganarían ellos. */
+.rp-modal-dialog.tarea-instr-modal-dialog {
+  max-width: 880px;
+  height: calc(100vh - 96px);
+  max-height: 900px;
+}
+
+.tarea-instr-modal-slot {
+  flex: 1;
+  min-height: 0;
+  padding: 24px 32px 32px;
+  overflow-y: auto;
+  cursor: text;
+}
+
+/* Todo el hueco del modal es zona de escritura: así el clic en cualquier punto
+   deja el cursor en el texto. */
+.tarea-instr-modal-slot #tareaInstrEditor.ql-container {
+  min-height: 100%;
+  margin-bottom: 0;
+}
+
+.tarea-instr-modal-slot #tareaInstrEditor .ql-editor {
+  min-height: 100%;
+}
+
+@media (max-width: 600px) {
+  .rp-modal-dialog.tarea-instr-modal-dialog {
+    height: 92vh;
+    max-height: 92vh;
+  }
+
+  .tarea-instr-modal-slot { padding: 20px; }
+}
+
+/* Menciones de consumibles y utensilios dentro de unas instrucciones. Valen
+   para los dos editores que las pintan: el panel de tarea y el lector del
+   Reparto, que también es un editor de Quill. */
+.ql-editor .mention {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #ececf0;
+  color: #4a4a55;
+  font-weight: 500;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.ql-editor .mention[data-tipo="consumible"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* El material ya no existe: se conserva el nombre con el que se guardó. */
+.ql-editor .mention.mention--missing {
+  background: #f1f1f4;
+  color: #9a9aa5;
+  text-decoration: line-through;
+}
+
+/* Desplegable de «@». Cuelga del contenedor del editor, que es el que tiene
+   position: relative, así que las coordenadas son las que da Quill. */
+.mention-menu {
+  position: absolute;
+  z-index: 50;
+  min-width: 220px;
+  max-width: calc(100% - 8px);
+  padding: 4px;
+  border: 1px solid #e8e8ec;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(22, 22, 26, 0.12);
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mention-option--active,
+.mention-option:hover { background: #f1f1f4; }
+
+.mention-option-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mention-color, #9a9aa5);
+}
+
+.mention-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-option-type {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+  font-size: 12px;
+}
+
+/* En escritorio, lista y panel van lado a lado, igual que en Ingredientes */
+@media (min-width: 768px) {
+  .tareas-tab.active {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-right: -24px;
+  }
+
+  .tareas-content {
+    flex: 1;
+    min-width: 0;
+    padding: 24px 24px 0 0;
+  }
+
+  /* Tabla y panel de edición lado a lado, igual que en Compras */
+  .consumibles-tab.active {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-right: -24px;
+  }
+
+  .consumibles-content {
+    flex: 1;
+    min-width: 0;
+    padding: 24px 24px 0 0;
+  }
+
+  .utensilios-tab.active {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-right: -24px;
+  }
+
+  .utensilios-content {
+    flex: 1;
+    min-width: 0;
+    padding: 24px 24px 0 0;
+  }
+
+  /* La cabecera de la tabla se queda pegada arriba al desplazar. El `top: 88px`
+     de .ingredient-table está medido para Compras, cuya cabecera de pestaña
+     mide eso y va fija; en las pestañas del rail la cabecera no va fija y la
+     tabla empieza más arriba, así que ese tope empujaba la fila de títulos
+     hacia abajo y tapaba la primera fila. */
+  .tareas-tab .ingredient-table th,
+  .consumibles-tab .ingredient-table th,
+  .utensilios-tab .ingredient-table th {
+    top: 0;
+  }
+
+  /* El panel es corto: sin esto el borde izquierdo acabaría a media pantalla */
+  .tarea-panel .ingredient-edit-panel-inner,
+  #utensilEditPanel .ingredient-edit-panel-inner {
+    min-height: 100vh;
+  }
+}
+
 /* Mismo aspecto que un botón de pestaña, pero sin la clase .tab-btn: esa la
    recoge el conmutador de pestañas y este botón no abre ninguna sección. */
 .nav-settings-btn {
@@ -4537,6 +5932,55 @@ label.toggle input[type="checkbox"]:checked::after {
 
 .ingredient-table tbody tr.is-inactive td {
   color: var(--color-secondary);
+}
+
+/* Celda de caducidad: avisa con el color. La selectividad va por encima de
+   `.ingredient-table td:not(:first-child)`, que fija el color de las celdas.
+   El amarillo no es el de marca sino su versión legible sobre blanco, la
+   misma que usa Planificación para el texto pequeño. */
+.ingredient-table td.expiry-cell.is-upcoming {
+  color: #D9A800;
+}
+
+.ingredient-table td.expiry-cell.is-due {
+  color: var(--danger);
+}
+
+/* El icono de alarma y la fecha van juntos en una línea. */
+.expiry-cell-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.expiry-cell-inner svg {
+  flex: none;
+}
+
+/* Celda de categoría como píldora, igual que la de Planificadas en App tareas.
+   Aquí no filtra, así que es un span y no un botón. */
+.consumable-cat-chip {
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 3px 10px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--brand-primary) 20%, white);
+  color: color-mix(in srgb, var(--brand-primary) 35%, #1c1c1c);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  /* La columna es estrecha: un nombre largo se recorta dentro de la píldora
+     en lugar de desbordarla. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Un consumible desactivado atenúa toda su fila; la píldora pone su propio
+   color, así que se atenúa aparte. */
+.ingredient-table tbody tr.is-inactive .consumable-cat-chip {
+  opacity: 0.55;
 }
 
 /* ── Pestaña Listas: vistas "Por tipo" / "Por comercio" ── */
@@ -4700,3 +6144,1241 @@ label.toggle input[type="checkbox"]:checked::after {
     width: 96px;
   }
 }
+
+
+/* ==========================================================================
+   Reparto — portado de la app Tareas
+   Los estilos van aislados con .rp / rp-, así que no tocan nada del resto de
+   la app. Sus datos viven en su propio nodo de Firebase (compra/reparto).
+   ========================================================================== */
+
+/* Reset local: Compras no tiene el reset global (`* { margin: 0; padding: 0 }`)
+   que sí tiene Tareas, y además da estilos propios a `ul`, `li`, `input` y
+   `select`. Se neutraliza todo eso dentro de `.rp` —con `:where()`, para que
+   cualquier regla `rp-` de abajo siga ganando— y así la UI se ve igual que
+   allí sin alterar el resto de la app. */
+.rp,
+.rp *,
+.rp *::before,
+.rp *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Tareas apaga el atributo `hidden` con una regla global. Sin ella, reglas como
+   `.rp-modal { display: flex }` ganarían al `display: none` del atributo y los
+   modales se verían siempre: se repone dentro de `.rp`. */
+.rp[hidden],
+.rp [hidden] { display: none !important; }
+
+.rp :where(h1, h2, h3, label) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.rp :where(ul, ol) { list-style: none; }
+
+.rp :where(li) {
+  display: list-item;
+  justify-content: initial;
+  border-bottom: 0;
+  font-size: inherit;
+}
+
+.rp :where(input, select, textarea, button) {
+  font: inherit;
+  color: inherit;
+  flex: initial;
+}
+
+.rp :where(input, select, textarea) {
+  border: 0;
+  border-radius: 0;
+}
+
+/* La cabecera de la pestaña solo sostiene el botón de menú, que únicamente se
+   ve en móvil: en escritorio queda vacía y no ocupa. El `display: flex` es para
+   que el botón no se estire a todo el ancho. */
+#reparto .header {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  #reparto .header { padding-bottom: 16px; }
+}
+
+/* En escritorio el body no trae relleno superior. */
+@media (min-width: 768px) {
+  #reparto { padding-top: 24px; }
+}
+
+/* ==========================================================================
+   Reparto — UI propia de esta pestaña (tokens y estilos aislados con .rp / rp-)
+   ========================================================================== */
+
+.rp {
+  --rp-bg: #ffffff;
+  --rp-surface: #ffffff;
+  --rp-line: #e8e8ec;
+  --rp-line-soft: #f1f1f4;
+  --rp-ink: #16161a;
+  --rp-ink-soft: #6b6b76;
+  --rp-ink-faint: #9a9aa5;
+  --rp-accent: #4f46e5;
+  --rp-accent-soft: #eef2ff;
+  --rp-hover: #fafafb;
+  --rp-radius: 14px;
+  --rp-shadow: 0 1px 2px rgba(16, 16, 26, 0.04), 0 8px 24px rgba(16, 16, 26, 0.06);
+
+  max-width: 1080px;
+  font-size: 14px;
+  color: var(--rp-ink);
+  letter-spacing: -0.01em;
+}
+
+/* Header */
+.rp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rp-heading h1 {
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--rp-ink);
+}
+
+.rp-heading p {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 20px;
+  color: var(--rp-ink-soft);
+}
+
+/* Botones */
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.rp-btn--primary {
+  background: var(--rp-ink);
+  color: #fff;
+}
+
+.rp-btn--primary:hover { background: #2c2c34; }
+
+.rp-btn:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+
+/* Tarjeta / tabla */
+.rp-card {
+  background: var(--rp-surface);
+  border: 1px solid var(--rp-line);
+  border-radius: var(--rp-radius);
+  box-shadow: var(--rp-shadow);
+  overflow: hidden;
+}
+
+.rp-scroll {
+  overflow-x: auto;
+}
+
+.rp-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+.rp-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fbfbfc;
+  border-bottom: 1px solid var(--rp-line);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rp-ink-faint);
+  white-space: nowrap;
+}
+
+.rp-col-grip         { width: 32px; }
+.rp-col-match        { width: 40px; }
+.rp-col-task         { width: 34%; }
+.rp-col-instructions { width: 110px; }
+.rp-col-owner        { width: 17%; }
+.rp-col-author       { width: 17%; }
+.rp-col-freq         { width: 16%; }
+.rp-col-duplicate    { width: 44px; }
+
+/* Indicador de si el responsable coincide con el autor */
+.rp-cell-match {
+  text-align: center;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Filas: solo lectura, se abren en el modal */
+.rp-table tbody tr {
+  border-bottom: 1px solid var(--rp-line-soft);
+  cursor: pointer;
+}
+
+.rp-table tbody tr:last-child { border-bottom: none; }
+.rp-table tbody tr:hover { background: var(--rp-hover); }
+
+.rp-table tbody tr:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}
+
+.rp-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.rp-cell-task {
+  font-weight: 550;
+  color: var(--rp-ink);
+}
+
+.rp-cell-freq { color: var(--rp-ink-soft); }
+
+/* Duplicar fila: solo al pasar el ratón (o con foco de teclado) */
+.rp-row-duplicate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rp-ink-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.rp-table tbody tr:hover .rp-row-duplicate,
+.rp-row-duplicate:focus-visible { opacity: 1; }
+
+.rp-row-duplicate:hover {
+  background: var(--rp-accent-soft);
+  color: var(--rp-accent);
+}
+
+.rp-row-duplicate:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 1px;
+}
+
+.rp-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Campo de texto del modal */
+.rp-field-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--rp-line);
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--rp-ink);
+}
+
+.rp-field-input::placeholder { color: var(--rp-ink-faint); }
+
+.rp-field-input:focus {
+  outline: none;
+  border-color: var(--rp-accent);
+  box-shadow: 0 0 0 3px var(--rp-accent-soft);
+}
+
+/* Disparador de desplegable (responsable, rutina) */
+.rp-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--rp-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-trigger:hover { border-color: var(--rp-line); }
+
+.rp-trigger:focus-visible,
+.rp-trigger[aria-expanded="true"] {
+  outline: none;
+  background: #fff;
+  border-color: var(--rp-accent);
+  box-shadow: 0 0 0 3px var(--rp-accent-soft);
+}
+
+.rp-trigger-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.rp-trigger-chevron {
+  flex-shrink: 0;
+  color: var(--rp-ink-faint);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.rp-trigger:hover .rp-trigger-chevron,
+.rp-trigger[aria-expanded="true"] .rp-trigger-chevron { opacity: 1; }
+
+.rp-placeholder { color: var(--rp-ink-faint); }
+
+/* Persona */
+.rp-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+}
+
+.rp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--rp-avatar-bg, #cd30e1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+
+.rp-avatar-stack {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.rp-avatar-stack .rp-avatar + .rp-avatar {
+  margin-left: -8px;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+/* Estado vacío */
+.rp-empty {
+  padding: 56px 24px 60px;
+  text-align: center;
+}
+
+.rp-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: var(--rp-accent-soft);
+  color: var(--rp-accent);
+}
+
+.rp-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rp-ink);
+}
+
+.rp-empty-text {
+  margin: 4px 0 18px;
+  font-size: 13.5px;
+  color: var(--rp-ink-soft);
+}
+
+/* Desplegable flotante */
+.rp-popover {
+  position: fixed;
+  z-index: 1100; /* los desplegables se abren desde dentro del modal */
+  min-width: 220px;
+  max-width: 320px;
+  padding: 6px;
+  border: 1px solid var(--rp-line, #e8e8ec);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(16, 16, 26, 0.14), 0 2px 6px rgba(16, 16, 26, 0.06);
+  font-family: inherit;
+  font-size: 14px;
+  color: #16161a;
+  animation: rp-pop-in 0.12s ease-out;
+}
+
+@keyframes rp-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rp-popover-search {
+  width: 100%;
+  height: 32px;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  border: 1px solid #e8e8ec;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.rp-popover-search:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px #eef2ff;
+}
+
+.rp-popover-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.rp-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  color: #16161a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-option:hover { background: #f5f5f7; }
+
+.rp-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-option-check {
+  flex-shrink: 0;
+  color: #4f46e5;
+  opacity: 0;
+}
+
+.rp-option[aria-selected="true"] .rp-option-check,
+.rp-option[aria-checked="true"] .rp-option-check { opacity: 1; }
+
+.rp-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  border: 1.5px solid #d3d3da;
+  border-radius: 5px;
+  color: transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.rp-option[aria-checked="true"] .rp-checkbox {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.rp-popover-empty {
+  padding: 12px 10px;
+  font-size: 13px;
+  color: #9a9aa5;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .rp-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .rp-header .rp-btn { width: 100%; }
+  .rp-card { border-radius: 12px; }
+  .rp-popover { max-width: calc(100vw - 24px); }
+}
+
+/* Reparto — aviso de error de guardado/lectura */
+.rp-error {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13.5px;
+  line-height: 20px;
+}
+
+/* Reparto — variantes de botón */
+.rp-btn--ghost {
+  background: #fff;
+  border-color: var(--rp-line);
+  color: var(--rp-ink);
+}
+
+.rp-btn--ghost:hover { background: var(--rp-hover); }
+
+.rp-btn--danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.rp-btn--danger:hover { background: #fef2f2; }
+
+.rp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rp-ink-faint);
+  cursor: pointer;
+}
+
+.rp-icon-btn:hover { background: var(--rp-line-soft); color: var(--rp-ink); }
+
+/* Reparto — disparador enmarcado (campos del modal) */
+.rp-trigger--boxed {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-color: var(--rp-line);
+  background: #fff;
+}
+
+.rp-trigger--boxed .rp-trigger-chevron { opacity: 1; }
+
+/* Reparto — modal
+   El z-index va por encima de la navegación (999), como el resto de modales de
+   la app: si no, el raíl y la barra lateral se verían sobre el fondo oscuro. */
+.rp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.rp-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 16, 26, 0.42);
+  animation: rp-fade-in 0.15s ease-out;
+}
+
+.rp-modal-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 48px);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(16, 16, 26, 0.24);
+  animation: rp-modal-in 0.16s cubic-bezier(0.2, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+@keyframes rp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes rp-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 14px 22px;
+  border-bottom: 1px solid var(--rp-line-soft);
+}
+
+.rp-modal-header h2 {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  color: var(--rp-ink);
+}
+
+.rp-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.rp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rp-ink-faint);
+}
+
+.rp-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--rp-line-soft);
+}
+
+.rp-modal-footer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+body.rp-modal-open { overflow: hidden; }
+
+@media (max-width: 600px) {
+  .rp-modal { padding: 0; align-items: flex-end; }
+
+  .rp-modal-dialog {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    animation: rp-sheet-in 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+  }
+
+  @keyframes rp-sheet-in {
+    from { transform: translateY(100%); }
+    to   { transform: none; }
+  }
+
+  .rp-modal-footer { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+}
+
+/* Reparto — campo con control apilado (selector + entrada libre) */
+.rp-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Reparto — botón "Ver" de instrucciones */
+.rp-instr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--rp-line);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--rp-ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.rp-instr-btn:hover {
+  background: var(--rp-accent-soft);
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.rp-instr-btn:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 1px;
+}
+
+/* Reparto — lector de instrucciones */
+.rp-modal-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rp-ink-faint);
+  margin-bottom: 2px;
+}
+
+.rp-modal-body--reader { padding: 8px 10px 20px; }
+
+.rp-reader .ql-editor {
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 22px;
+  color: var(--rp-ink);
+}
+
+.rp-reader .ql-editor ol,
+.rp-reader .ql-editor ul { padding-left: 4px; }
+
+/* Las reglas globales de `li` lo ponen en flex con borde inferior: aquí tiene
+   que volver a ser un elemento de lista normal. */
+.rp-reader .ql-editor li {
+  display: list-item;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Las casillas escritas desde el panel de tarea, con la casilla de la app */
+.rp-reader .ql-editor ul[data-checked] > li::before {
+  content: '';
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--rp-ink-faint);
+  border-radius: 2px;
+  background: #fff;
+  vertical-align: middle;
+  margin-top: -3px;
+}
+
+.rp-reader .ql-editor ul[data-checked="true"] > li::before {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23fff' d='M6.2 12.2 2.7 8.7l1.1-1.1 2.4 2.4 6-6 1.1 1.1z'/%3E%3C/svg%3E") no-repeat center / 11px;
+}
+
+/* Quill convierte el propio #rp-view-content en el contenedor: sin espacio.
+   height:auto anula el 100% del core, que aquí estiraría el modal. */
+.rp-reader.ql-container {
+  border: none;
+  height: auto;
+  font-family: inherit;
+}
+
+/* Reparto — secciones (una tabla por sección) */
+.rp-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.rp-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-left: 2px;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  color: var(--rp-ink);
+}
+
+.rp-group-count {
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--rp-ink-faint);
+}
+
+/* Opción de acción del desplegable ("Nueva sección…") */
+.rp-option--action {
+  margin-top: 4px;
+  border-top: 1px solid var(--rp-line-soft);
+  border-radius: 0 0 8px 8px;
+  padding-top: 9px;
+  color: var(--rp-accent);
+  font-weight: 550;
+}
+
+/* Reparto — menú y renombrado de sección */
+.rp-group-add,
+.rp-group-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--rp-ink-faint);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* El + va pegado al borde derecho de la cabecera de la sección */
+.rp-group-add {
+  align-self: center;
+  margin-left: auto;
+}
+
+.rp-group-add:hover,
+.rp-group-menu:hover,
+.rp-group-menu[aria-expanded="true"] {
+  background: var(--rp-line-soft);
+  color: var(--rp-ink);
+}
+
+.rp-group-menu:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 1px;
+}
+
+.rp-option--disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rp-option--disabled:hover { background: transparent; }
+
+/* Reparto — arrastrar cabeceras de sección */
+.rp-group-title {
+  cursor: grab;
+  user-select: none;
+}
+
+.rp-group-title:active { cursor: grabbing; }
+
+.rp-group-grip {
+  color: var(--rp-ink-faint);
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.rp-group:hover .rp-group-grip { color: var(--rp-ink-soft); }
+
+.rp-group--dragging {
+  opacity: 0.55;
+}
+
+.rp-group--dragging .rp-card {
+  border-color: var(--rp-accent);
+}
+
+/* Reparto — arrastrar filas dentro de su tabla */
+.rp-cell-grip {
+  padding-left: 6px !important;
+  padding-right: 0 !important;
+}
+
+.rp-row-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: #d0d0d8;
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  transition: color 0.15s ease;
+}
+
+.rp-row-grip:active { cursor: grabbing; }
+
+.rp-table tbody tr:hover .rp-row-grip,
+.rp-table tbody tr:focus-visible .rp-row-grip { color: var(--rp-ink-faint); }
+
+.rp-row--dragging {
+  opacity: 0.5;
+  background: var(--rp-accent-soft) !important;
+}
+
+/* En táctil no hay arrastre nativo: el asa solo estorbaría */
+@media (max-width: 600px) {
+  .rp-col-grip,
+  .rp-cell-grip,
+  .rp-group-grip { display: none; }
+}
+
+/* Reparto — pestañas */
+.rp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--rp-line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rp-tabs::-webkit-scrollbar { display: none; }
+
+.rp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 0 2px 0 0;
+  border-radius: 9px 9px 0 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  user-select: none; /* al pulsar dos veces no se selecciona el nombre */
+}
+
+.rp-tab--active {
+  border-bottom-color: var(--rp-ink);
+}
+
+.rp-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--rp-ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.rp-tab-btn:hover { background: var(--rp-hover); color: var(--rp-ink); }
+
+.rp-tab--active .rp-tab-btn { color: var(--rp-ink); }
+
+.rp-tab-btn:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}
+
+.rp-tab-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--rp-line-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rp-ink-faint);
+  text-align: center;
+}
+
+.rp-tab--active .rp-tab-count {
+  background: var(--rp-accent-soft);
+  color: #3730a3;
+}
+
+.rp-panel-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .rp-panel-toolbar .rp-btn { width: 100%; }
+}
+
+/* Reparto — pestaña de rescate: la de las filas que quedaron guardadas en una
+   pestaña que ya no existe. Se marca en ámbar porque es temporal: desaparece
+   en cuanto se recoloca la última fila. */
+.rp-tab--orphan .rp-tab-btn,
+.rp-tab--orphan.rp-tab--active .rp-tab-btn { color: #b45309; }
+
+.rp-tab--orphan .rp-tab-count,
+.rp-tab--orphan.rp-tab--active .rp-tab-count {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.rp-tab--orphan.rp-tab--active { border-bottom-color: #b45309; }
+
+/* Reparto — pestaña fija de resumen */
+.rp-tab--fixed {
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.rp-tab--fixed .rp-tab-btn { font-weight: 600; }
+
+.rp-summary-card { padding: 24px 26px 26px; }
+
+/* Reparto — crear sección y sección vacía */
+.rp-add-section-bar { margin-top: 32px; }
+
+.rp-add-section-bar .rp-btn[hidden] { display: none; }
+
+@media (max-width: 600px) {
+  .rp-add-section-bar .rp-btn { width: 100%; }
+}
+
+.rp-row-empty td {
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: var(--rp-ink-faint);
+  text-align: center;
+}
+
+/* Widget plegable de las pestañas */
+.rp-summary-head--toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rp-summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--rp-ink-faint);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rp-summary-head--toggle:hover .rp-summary-toggle {
+  background: var(--rp-line-soft);
+  color: var(--rp-ink);
+}
+
+.rp-summary-toggle svg { transition: transform 0.15s ease; }
+
+.rp-summary-card--collapsed .rp-summary-toggle svg { transform: rotate(-90deg); }
+
+.rp-summary-card--collapsed { padding-bottom: 24px; }
+
+.rp-summary-body[hidden] { display: none; }
+
+/* En las pestañas normales el widget va encima de las secciones */
+#rp-summary:not([hidden]) { margin-bottom: 32px; }
+
+/* 32px entre las pestañas y el widget: se colapsa con los 18px de margen
+   inferior de .rp-tabs (prevalece el mayor), así que no se suman. */
+.rp-tabs + #rp-summary:not([hidden]) { margin-top: 32px; }
+
+.rp-summary-head h2 {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  color: var(--rp-ink);
+}
+
+.rp-summary-head p {
+  margin-top: 3px;
+  font-size: 13.5px;
+  color: var(--rp-ink-soft);
+}
+
+.rp-summary-body {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.rp-donut {
+  width: 176px;
+  height: 176px;
+  flex-shrink: 0;
+}
+
+.rp-donut-total {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  fill: var(--rp-ink);
+}
+
+.rp-donut-label {
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--rp-ink-faint);
+}
+
+.rp-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 240px;
+  flex: 1;
+}
+
+.rp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rp-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.rp-legend-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--rp-ink);
+}
+
+.rp-legend-detail {
+  font-size: 12.5px;
+  color: var(--rp-ink-faint);
+}
+
+.rp-legend-pct {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--rp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-legend-note {
+  padding-top: 12px;
+  border-top: 1px solid var(--rp-line-soft);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--rp-ink-soft);
+}
+
+@media (max-width: 600px) {
+  .rp-summary-body {
+    gap: 24px;
+    justify-content: center;
+  }
+
+  .rp-legend { min-width: 0; width: 100%; }
+}
+
+/* Varios widgets seguidos (reparto, responsabilidad real, incidencias) */
+.rp-summary-card + .rp-summary-card { margin-top: 20px; }
+
+/* Reparto — widget de incidencias (pestaña General) */
+
+.rp-incidents {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.rp-incident {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--rp-line-soft);
+}
+
+.rp-incident:last-child { border-bottom: none; padding-bottom: 0; }
+
+.rp-incident-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 78px;
+}
+
+.rp-incident-arrow {
+  font-size: 13px;
+  color: var(--rp-ink-faint);
+}
+
+.rp-incident-text {
+  font-size: 14px;
+  color: var(--rp-ink);
+}
+
+.rp-incident-count {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--rp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
